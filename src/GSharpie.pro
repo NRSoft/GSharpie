@@ -12,6 +12,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = GSharpie
 TEMPLATE = app
 
+INCLUDEPATH += ../../GSharp/include
+LIBS += ../../GSharp/lib/libgsharp.a
 
 SOURCES += main.cpp\
         mainwindow.cpp \

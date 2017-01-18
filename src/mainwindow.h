@@ -23,6 +23,8 @@ private slots:
     void on_sequencerFinished();
     void on_sequencerStep(int lineNumber);
 
+    void on_btnLoad_clicked();
+
 private:
     Ui::MainWindow *ui;
 

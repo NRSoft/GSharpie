@@ -1,4 +1,7 @@
 #include <QDebug>
+#include <QFile>
+#include <QFileDialog>
+#include <QErrorMessage>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -18,6 +21,22 @@ MainWindow::~MainWindow()
 {
     delete _sequencer;
     delete ui;
+}
+
+
+void MainWindow::on_btnLoad_clicked()
+{
+    QString name = QFileDialog::getOpenFileName(this, QStringLiteral("Open file"), ".",
+                        QStringLiteral("G-sharp (*.ngs);;G-code (*.nc);;All files (*.*)"));
+    if(name.isEmpty()) return;
+
+    QFile file(name);
+    if(!file.open(QFile::ReadOnly | QFile::Text)){
+        QErrorMessage e; e.showMessage(QString("Cannot open file ") + name);
+        return;
+    }
+
+    _sequencer->loadProgram(file.readAll());
 }
 
 
@@ -44,5 +63,5 @@ void MainWindow::on_sequencerFinished()
 
 void MainWindow::on_sequencerStep(int lineNumber)
 {
-    qDebug() << "Step" << lineNumber;
+    qDebug() << "line" << lineNumber;
 }
