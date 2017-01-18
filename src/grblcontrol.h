@@ -1,8 +1,8 @@
 #ifndef GSHARPIE_GRBLCONTROL_H
 #define GSHARPIE_GRBLCONTROL_H
-#include "gcodesender.h"
 
-class GrblControl : public GCodeSender
+
+class GrblControl
 {
 public:
     GrblControl();

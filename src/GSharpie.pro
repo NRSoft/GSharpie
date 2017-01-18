@@ -15,12 +15,10 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    gcodesender.cpp \
     grblcontrol.cpp \
     gcodesequencer.cpp
 
 HEADERS  += mainwindow.h \
-    gcodesender.h \
     grblcontrol.h \
     gcodesequencer.h
 
