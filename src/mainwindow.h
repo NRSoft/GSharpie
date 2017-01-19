@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 
+#include "grblcontrol.h"
 #include "gcodesequencer.h"
 
 namespace Ui {
@@ -28,6 +29,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
 
+    GrblControl* _grbl;
     GCodeSequencer* _sequencer;
 };
 

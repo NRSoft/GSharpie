@@ -11,6 +11,13 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    QString grblVersion;
+    _grbl = new GrblControl(QStringLiteral("/dev/ttyUSB0"));
+    if(_grbl->connect(grblVersion))
+        qDebug() << "connected to" << grblVersion.toStdString().c_str();
+    else
+        qDebug() << "cannot connect to Grbl";
+
     _sequencer = new GCodeSequencer();
     connect(_sequencer, SIGNAL(finished()), this, SLOT(on_sequencerFinished()));
     connect(_sequencer, SIGNAL(currentStep(int)), this, SLOT(on_sequencerStep(int)));
@@ -20,6 +27,7 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete _sequencer;
+    delete _grbl;
     delete ui;
 }
 
