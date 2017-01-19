@@ -4,16 +4,31 @@
 #include "grblcontrol.h"
 
 
+void GCodeSequencer::setGrblControl(GrblControl* grbl)
+{
+    if(!isRunning()){
+        _grbl = grbl;
+    }
+}
+
+
 void GCodeSequencer::loadProgram(const QString& program)
 {
-    _mutex.lock();
-    _program = program;
-    _mutex.unlock();
+    if(!isRunning()){
+        _mutex.lock();
+        _program = program;
+        _mutex.unlock();
+    }
 }
 
 
 void GCodeSequencer::run()
 {
+    if(!_grbl->isConnected()){
+        qDebug()<<"GRBL controller is not connected";
+        return;
+    }
+
     _mutex.lock();
     std::string program = _program.toStdString();
     _mutex.unlock();

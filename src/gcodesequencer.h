@@ -5,6 +5,7 @@
 #include <QThread>
 #include <QString>
 #include "gsharp.h"
+#include "grblcontrol.h"
 
 
 class GCodeSequencer: public QThread
@@ -13,6 +14,8 @@ class GCodeSequencer: public QThread
 
 public:
     GCodeSequencer() {}
+
+    void setGrblControl(GrblControl* grbl);
 
     void loadProgram(const QString& program);
 
@@ -25,6 +28,7 @@ private:
     QMutex  _mutex;
     QString _program; // container for active g# program
 
+    GrblControl* _grbl;
     gsharp::Interpreter _interp;
 };
 
