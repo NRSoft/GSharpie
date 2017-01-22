@@ -4,32 +4,82 @@
 #include <string>
 #include <QtGlobal>
 #include <QtSerialPort/QSerialPort>
+#include <QQueue>
 
 using namespace std;
 
 
-class GrblControl
+struct CncPosition
 {
+    double mx, my, mz; // in machine coordinates
+    double wx, wy, wz; // in work coordinates
+};
+
+
+struct GrblCommand
+// only for commands with 'ok' or 'error' response
+// (in fact everything exept '?' and 'Ctrl-X')
+{
+    quint64 id; // sequence number
+    QString name; // readble name
+    std::string code; // grbl code
+    bool sent;  // can be delayed
+    QString error; // error message, or empty if 'ok'
+    QStringList response; // information lines
+};
+
+
+class GrblControl: public QObject
+{
+    Q_OBJECT
+
 public:
-    GrblControl(const QString& portName, qint32 baudrate=115200);
-    ~GrblControl() {disconnect();}
+    enum STATUS{Undef, Idle, Run, Hold, Door, Home, Alarm, Check};
 
-    bool connect(QString& grblVersion);
-    inline void disconnect() {_port->close(); _connected=false;}
+public:
+    GrblControl();
+    ~GrblControl() {disconnectSerial();}
+
+    bool connectSerialPort(const QString& portName, qint32 baudrate=115200);
+    void disconnectSerial();
     inline bool isConnected() const {return _connected;}
+    inline bool isRunning() const {return _connected && !_version.isEmpty();}
 
-    bool issueReset(QString& grblVersion);
-    //const string send(const string& line);
-    string issueCommand(string cmd);
+    // any command with 'ok' or 'error' return (everything except '?' and 'ctrl-X')
+    // returns command id for references when completed, or 0 if error
+    quint32 issueCommand(const char* cmd, const QString& readableName);
+
+    bool issueReset(); // 'ctrl-X'
+    bool issueStatusRequest(); // '?'
+
+
+    inline const QString& getVersion() const {return _version;}
+    inline STATUS getCurrentStatus(CncPosition& pos) const {pos = _position; return _status;}
+
+signals:
+    void report(int level, const QString& msg); // levels: debug(-), normal(0), errors(+)
+    void commandComplete(GrblCommand cmd); // keep cmd as copy, as it will be deleted from the queue!
+
+private slots:
+    void _handlePortRead();
+    void _handlePortError(QSerialPort::SerialPortError error);
 
 private:
-    bool _send(const string& data, string& response); // returns response
+    bool _sendNextCommand();
 
 private:
+    QString _version;
+
     QSerialPort* _port;
     bool _connected;
 
-    int _readTimeout; // ms
+    QQueue<GrblCommand> _commands;
+    QByteArray  _response;
+    quint32 _lastCmdId;
+
+
+    STATUS _status;
+    CncPosition _position;
 };
 
 #endif // GSHARPIE_GRBLCONTROL_H

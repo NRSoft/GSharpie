@@ -6,61 +6,39 @@
 
 void GCodeSequencer::setGrblControl(GrblControl* grbl)
 {
-    if(!isRunning()){
-        _grbl = grbl;
-    }
+    _grbl = grbl;
 }
 
 
-void GCodeSequencer::loadProgram(const QString& program)
+bool GCodeSequencer::loadProgram(const QString& program)
 {
-    if(!isRunning()){
-        _mutex.lock();
-        _program = program;
-        _mutex.unlock();
-    }
-}
-
-
-void GCodeSequencer::run()
-{
-    if(!_grbl->isConnected()){
-        qDebug()<<"GRBL controller is not connected";
-        return;
-    }
-
-    _mutex.lock();
-    std::string program = _program.toStdString();
-    _mutex.unlock();
-
     try{
-        _interp.Load(program);
+        _interp.Load(program.toStdString());
     }
     catch(std::exception& e){
-       qDebug() << "File parsing error: " << e.what();
-       return;
+        emit report(1, QString("Parsing G# file: ") + e.what());
+        return false;
     }
 
-    std::string str;
+    return true;
+}
+
+
+void GCodeSequencer::rewindProgram()
+{
+    _interp.Rewind();
+}
+
+
+bool GCodeSequencer::nextLine(int& lineNumber, std::string& line)
+{
     gsharp::ExtraInfo extra;
-    try{
-        while(_interp.Step(str, extra)){
-             // get next G-Code line
-             if(!str.empty()){
-                 emit currentStep(_interp.GetCurrentLineNumber());
-                 qDebug() << "cmd" << QString(str.c_str()) << "(" << _interp.GetCurrentLineNumber() << ")";
-                 sleep(1);
-                 if(isInterruptionRequested()){
-                    qDebug()<<"thread terminated";
-                    return;
-                 }
-             }
+    while(_interp.Step(line, extra)){
+        if(!line.empty()){
+qDebug() << "Next cmd in sequence:" << line.c_str();
+            lineNumber = _interp.GetCurrentLineNumber();
+            return true;
         }
     }
-    catch(std::exception& e){
-       qDebug() << "Interpreter error: " << e.what();
-       return;
-    }
-
-    qDebug()<<"thread finished successfully";
+    return false;
 }

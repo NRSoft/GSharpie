@@ -1,33 +1,30 @@
 #ifndef GSHARPIE_GCODESEQUENCER_H
 #define GSHARPIE_GCODESEQUENCER_H
 #include <QObject>
-#include <QMutex>
-#include <QThread>
 #include <QString>
 #include "gsharp.h"
 #include "grblcontrol.h"
 
 
-class GCodeSequencer: public QThread
+
+class GCodeSequencer: public QObject
 {
     Q_OBJECT
 
 public:
-    GCodeSequencer() {}
+    GCodeSequencer() {_grbl = nullptr;}
 
     void setGrblControl(GrblControl* grbl);
 
-    void loadProgram(const QString& program);
+    bool loadProgram(const QString& program);
+    void rewindProgram();
 
-    void run() Q_DECL_OVERRIDE;
+    bool nextLine(int& lineNumber, string& line);
 
 signals:
-    void currentStep(int lineNumber);
+    void report(int level, const QString& msg); // levels: debug(-), normal(0), errors(+)
 
 private:
-    QMutex  _mutex;
-    QString _program; // container for active g# program
-
     GrblControl* _grbl;
     gsharp::Interpreter _interp;
 };

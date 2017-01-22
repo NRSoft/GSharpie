@@ -3,7 +3,22 @@
 
 using namespace std;
 
-GrblControl::GrblControl(const QString &portName, qint32 baudrate)
+extern int GSharpieReportLevel;
+
+GrblControl::GrblControl()
+{
+    _port = nullptr;
+    _connected = false;
+
+    _status = Undef;
+    _position.mx = _position.my = _position.mz = 0.0;
+    _position.wx = _position.wy = _position.wz = 0.0;
+
+    _lastCmdId = 0;
+}
+
+
+bool GrblControl::connectSerialPort(const QString& portName, qint32 baudrate)
 {
     _port = new QSerialPort(portName);
     _port->setBaudRate(baudrate);
@@ -12,67 +27,180 @@ GrblControl::GrblControl(const QString &portName, qint32 baudrate)
     _port->setStopBits(QSerialPort::OneStop);
     _port->setFlowControl(QSerialPort::NoFlowControl);
     _port->setReadBufferSize(128);
-    _connected = false;
 
-    _readTimeout  = 200;
-}
+    connect(_port, SIGNAL(readyRead()), this, SLOT(_handlePortRead()));
+    connect(_port, SIGNAL(error(QSerialPort::SerialPortError)),
+             this, SLOT(_handlePortError(QSerialPort::SerialPortError)));
 
-
-bool GrblControl::connect(QString& grblVersion)
-{
     _connected = _port->open(QIODevice::ReadWrite);
-    qDebug() << "opening serial port :" << _connected;
-    if(_connected){
-        _connected = issueReset(grblVersion);
-        qDebug() << "connecting to GRBL :" << _connected;
-    }
+
+    if(_connected)
+        emit report(0, QString("Opened serial port ") + _port->portName());
+    else
+        emit report(1, QString("Cannot open serial port ") + _port->portName());
+
     return _connected;
 }
 
 
-bool GrblControl::issueReset(QString& grblVersion)
+void GrblControl::disconnectSerial()
 {
-    string response;
+    if(GSharpieReportLevel < 0)
+        emit report(-1, QString("Closing serial port ") + _port->portName());
+    _port->close();
+    _connected=false;
+}
+
+
+quint32 GrblControl::issueCommand(const char* cmd, const QString& readableName)
+{
+    if(!_connected)
+        return 0;
+
+    if(GSharpieReportLevel < -1)
+        emit report(-2, QString("Sending: ") +
+                        QString(cmd).remove(QRegExp("[\r\n]")));
+
+    GrblCommand command;
+    command.id = ++_lastCmdId;
+    command.name = readableName;
+    command.code.assign(cmd);
+    command.sent = false;
+    _commands.enqueue(command);
+
+    _sendNextCommand();
+
+    return command.id;
+}
+
+
+bool GrblControl::issueReset()
+{
+    if(!_connected)
+        return false;
+
+    if(GSharpieReportLevel < 0)
+        emit report(-1, QString("Resetting Grbl..."));
+
+    _version.clear(); // to check later if connection is established
     static char data[2] = {0x18, 0}; // "Ctrl-X" character
-    bool success = _send(data, response);
+    _port->write(data, 1);
+    _port->waitForBytesWritten(5); // make sure the bytes are written before continuing
 
-    if(success){
-        size_t first = response.find("Grbl");
-        size_t last  = response.find('[');
-        if(first!=string::npos && last!=string::npos)
-            grblVersion = response.substr(first, last-first).c_str();
-        else
-            grblVersion.clear();
-    }
-
-//    qDebug() << "issuing reset :" << QString(response.c_str());
-
-    return success;
+    return true;
 }
 
 
-///////  s e n d  ///////
-bool GrblControl::_send(const string& data, string& response)
+bool GrblControl::issueStatusRequest()
 {
-    if(_connected){
-        _port->write(data.c_str());
+    if(!_connected)
+        return false;
 
-        if(_port->waitForBytesWritten(1)){
-            if(_port->waitForReadyRead(_readTimeout)){
-                response.assign(_port->readAll().constData());
-                while(_port->waitForReadyRead(1))
-                    response += _port->readAll().constData();
-                return true;
-            }
-            else
-                response.assign("read timeout");
-        }
-        else
-            response.assign("write timeout");
-    }
-    else
-        response.assign("no connection");
+    static char data[2] = {'?', 0}; // "Ctrl-X" character
+    _port->write(data, 1);
+    _port->waitForBytesWritten(5); // make sure the bytes are written before continuing
 
-    return false;
-
+    return true;
 }
+
+
+//////  s e n d  N e x t  C o m m a n d  //////
+bool GrblControl::_sendNextCommand()
+{
+    int byteCount = 0;
+    QQueue<GrblCommand>::iterator it;
+    for(it = _commands.begin(); it != _commands.end(); ++it){
+        if(it->sent)
+            byteCount += it->code.size();
+        else{ // we came to the first not sent command
+            if(byteCount + it->code.size() > 127) // grbl buffer size
+                return false;
+//qDebug() << "To Grbl:" << QString(it->code.c_str());
+            _port->write(it->code.c_str());
+            it->sent = true;
+            return true;
+        }
+    }
+    return false; // all the queue have been sent
+}
+
+
+///////  h a n d l e  P o r t  R e a d  ////////
+void GrblControl::_handlePortRead()
+{
+    _response.append(_port->readAll());
+
+    // process Grbl output line by line
+    int lineEnd;
+    while((lineEnd = _response.indexOf('\n')) >= 0){
+        QString line(_response.left(lineEnd-1)); // there is "\r\n" pair
+        _response = _response.mid(lineEnd+1);
+//qDebug() << "From Grbl:" << line;
+        if(line[0] == '<'){ // status response to '?' enquiry
+            if(line[1] == 'R')
+                _status = Run;
+            else if(line[1] == 'H')
+                _status = (line[3] == 'm')? Home: Hold;
+            else if(line[1] == 'C')
+                _status = Check;
+            else if(line[1] == 'I')
+                _status = Idle;
+            else if(line[1] == 'A')
+                _status = Alarm;
+            else if(line[1] == 'D')
+                _status = Door;
+            else
+                _status = Undef;
+
+            // TODO: more generic parsing, the current format may change
+            size_t mposX = line.indexOf(',') + 6;
+            size_t mposY = line.indexOf(',', mposX) + 1;
+            size_t mposZ = line.indexOf(',', mposY) + 1;
+            size_t lastM = line.indexOf(',', mposZ);
+            size_t wposX = lastM + 6;
+            size_t wposY = line.indexOf(',', wposX) + 1;
+            size_t wposZ = line.indexOf(',', wposY) + 1;
+            size_t lastW = line.indexOf('>', wposZ);
+
+            _position.mx = line.mid(mposX, mposY-mposX-1).toDouble();
+            _position.my = line.mid(mposY, mposZ-mposY-1).toDouble();
+            _position.mz = line.mid(mposZ, lastM-mposZ).toDouble();
+
+            _position.wx = line.mid(wposX, wposY-wposX-1).toDouble();
+            _position.wy = line.mid(wposY, wposZ-wposY-1).toDouble();
+            _position.wz = line.mid(wposZ, lastW-wposZ).toDouble();
+        }
+        else if(line.left(4) == QStringLiteral("Grbl")){ // after reset
+            int last  = line.indexOf('[');
+            _version = line.left(last);
+        }
+        else{ // other commands
+            if(!_commands.isEmpty()){
+                if(GSharpieReportLevel < -1)
+                    emit report(-2, QString("Grbl message: ") + line);
+
+                GrblCommand& cmd = _commands.head();
+                if(line[0] == 'o' || line[0] == 'e' || line[0] == 'A'){ // 'ok', 'error' or 'ALARM'
+                    if(line[0] == 'e' || line[0] == 'A')
+                        cmd.error = line.mid(7); // everything after ':'
+                        //TODO: stop command queueing if error happened
+                    emit commandComplete(_commands.dequeue());
+                    _sendNextCommand();
+                }
+                else
+                    cmd.response.append(line);
+            }
+            else if(GSharpieReportLevel < -1)
+                emit report(-2, QString("Grbl message without command: ") + line);
+        }
+    }
+}
+
+
+///////  h a n d l e  P o r t  E r r o r  ////////
+void GrblControl::_handlePortError(QSerialPort::SerialPortError error)
+{
+    if(error == QSerialPort::ReadError)
+        emit report(1, QString("Reading from serial port: ") + _port->errorString());
+}
+
