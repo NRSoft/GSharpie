@@ -16,17 +16,18 @@ public:
 
     void setGrblControl(GrblControl* grbl);
 
-    bool loadProgram(const QString& program);
+    bool loadProgram(const QString& program, QString* errorMsg=nullptr);
     void rewindProgram();
 
-    bool nextLine(int& lineNumber, string& line);
+    inline bool isReady() const {return _ready;}
 
-signals:
-    void report(int level, const QString& msg); // levels: debug(-), normal(0), errors(+)
+    bool nextLine(int& lineNumber, string& line);
 
 private:
     GrblControl* _grbl;
     gsharp::Interpreter _interp;
+
+    bool _ready;
 };
 
 #endif // GSHARPIE_GCODESEQUENCER_H

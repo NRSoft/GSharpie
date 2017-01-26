@@ -173,6 +173,7 @@ void GrblControl::_handlePortRead()
         else if(line.left(4) == QStringLiteral("Grbl")){ // after reset
             int last  = line.indexOf('[');
             _version = line.left(last);
+            emit report(0, QString("Welcome to ") + _version);
         }
         else{ // other commands
             if(!_commands.isEmpty()){

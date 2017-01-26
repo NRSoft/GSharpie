@@ -14,9 +14,12 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->txtErrorLog->clear();
+    ui->btnStart->setEnabled(false);
+    ui->comboJogDist->setCurrentIndex(3);
+    ui->editGCode->setReadOnly(true);
 
     on_errorReport(0, QString("Program started on ") + QDate::currentDate().toString());
-//    GSharpieReportLevel = -2;
+//    GSharpieReportLevel = -1;
 
     _grbl = new GrblControl();
     connect(_grbl, SIGNAL(report(int, QString)), this, SLOT(on_errorReport(int, QString)));
@@ -26,12 +29,14 @@ MainWindow::MainWindow(QWidget *parent) :
         _grbl->issueReset();
 
     _sequencer = new GCodeSequencer();
-    connect(_sequencer, SIGNAL(report(int, QString)), this, SLOT(on_errorReport(int, QString)));
     _sequencer->setGrblControl(_grbl);
 
-    _timer = new QTimer(this);
-    connect(_timer, SIGNAL(timeout()), this, SLOT(updateStatus()));
-    _timer->start(200);
+    _timerGCode = new QTimer(this);
+    connect(_timerGCode, SIGNAL(timeout()), this, SLOT(_sendGCode()));
+
+    _timerStatus = new QTimer(this);
+    connect(_timerStatus, SIGNAL(timeout()), this, SLOT(_updateStatus()));
+    _timerStatus->start(200);
     _restartTimer = false;
 }
 
@@ -55,49 +60,134 @@ void MainWindow::on_btnLoad_clicked()
         on_errorReport(1, QString("Cannot open file ") + name);
         return;
     }
+    on_errorReport(0, QString("Opened file ") + name);
 
-    _sequencer->loadProgram(file.readAll());
+    QString errorMsg;
+    QString program(file.readAll());
+    if(!_sequencer->loadProgram(program, &errorMsg))
+        on_errorReport(1, QString("Parsing g-code line ") + errorMsg);
+    ui->btnStart->setEnabled(_grbl->isActive() && _sequencer->isReady());
+
+    ui->editGCode->setPlainText(program);
 }
 
 
 void MainWindow::on_btnStart_clicked()
 {
-    if(!_grbl->isRunning())
-        return;
+    on_errorReport(0, QString("Program started"));
+    _timerGCode->start(5);
 }
 
 
-void MainWindow::on_btnKillAlarm_clicked()
+void MainWindow::on_btnReset_clicked()
 {
-    if(!_grbl->isRunning())
-        return;
-    _issueCommand("$X\n", "Alarm_Unlock");
+    if(_grbl->isActive())
+        _grbl->issueReset();
 }
 
 
-void MainWindow::on_btnCheckMode_clicked()
+void MainWindow::on_btnUnlock_clicked()
 {
-    if(!_grbl->isRunning())
+    if(!_grbl->isActive())
         return;
-    _issueCommand("$C\n", "Check_Mode");
+    _issueCommand("$X", "Unlock_Alarm");
+}
+
+
+void MainWindow::on_btnSimulation_clicked()
+{
+    if(!_grbl->isActive())
+        return;
+    _issueCommand("$C", "Check_Mode");
 }
 
 
 void MainWindow::on_btnSetOrigin_clicked()
 {
-    if(!_grbl->isRunning())
+    if(!_grbl->isActive())
         return;
-    _issueCommand("G10P1L20\n", "Set_Origin");
+    _issueCommand("G10P1L20X0Y0Z0", "Set_Origin");
 }
 
 void MainWindow::on_btnHoming_clicked()
 {
-    if(!_grbl->isRunning())
+    if(!_grbl->isActive())
         return;
-    _timer->stop(); // status is not reported during homing
-    _issueCommand("$H\n", "Homing");
+    _timerStatus->stop(); // status is not reported during homing
+    _issueCommand("$H", "Homing");
     ui->label_Status->setText("homing");
     _restartTimer = true;
+}
+
+
+void MainWindow::on_btnJogR_clicked()
+{
+    if(!_grbl->isActive())
+        return;
+
+    QString cmd("G91X");
+    cmd += ui->comboJogDist->currentText();
+    _issueCommand(cmd.toLatin1().constData(), "Jog_R");
+    _issueCommand("G90", "Abs_Pos");
+}
+
+void MainWindow::on_btnJogL_clicked()
+{
+    if(!_grbl->isActive())
+        return;
+
+    QString cmd("G91X-");
+    cmd += ui->comboJogDist->currentText();
+    _issueCommand(cmd.toLatin1().constData(), "Jog_L");
+    _issueCommand("G90", "Abs_Pos");
+}
+
+
+void MainWindow::on_btnJogF_clicked()
+{
+    if(!_grbl->isActive())
+        return;
+
+    QString cmd("G91Y");
+    cmd += ui->comboJogDist->currentText();
+    _issueCommand(cmd.toLatin1().constData(), "Jog_F");
+    _issueCommand("G90", "Abs_Pos");
+}
+
+
+void MainWindow::on_btnJogB_clicked()
+{
+    if(!_grbl->isActive())
+        return;
+
+    QString cmd("G91Y-");
+    cmd += ui->comboJogDist->currentText();
+    _issueCommand(cmd.toLatin1().constData(), "Jog_B");
+    _issueCommand("G90", "Abs_Pos");
+}
+
+
+void MainWindow::on_btnJogU_clicked()
+{
+    if(!_grbl->isActive())
+        return;
+
+    QString cmd("G91Z");
+    cmd += ui->comboJogDist->currentText();
+    _issueCommand(cmd.toLatin1().constData(), "Jog_U");
+    _issueCommand("G90", "Abs_Pos");
+}
+
+
+void MainWindow::on_btnJogD_clicked()
+{
+    if(!_grbl->isActive())
+        return;
+
+    QString cmd("G91Z-");
+    cmd += ui->comboJogDist->currentText();
+    _issueCommand(cmd.toLatin1().constData(), "Jog_D");
+    _issueCommand("G90", "Abs_Pos");
 }
 
 
@@ -105,12 +195,15 @@ void MainWindow::on_GrblResponse(GrblCommand cmd)
 {
     for(int i=0; i < cmd.response.size(); ++i)
         on_errorReport(0, cmd.name + QStringLiteral(": ") + cmd.response.at(i));
-    if(!cmd.error.isEmpty())
+
+    if(cmd.error.isEmpty())
+        on_errorReport(-1, QString("Confirmed [") + QString::number(cmd.id) + QStringLiteral("]: ok"));
+    else
         on_errorReport(1, cmd.name + QStringLiteral(": ") + cmd.error);
 
     if(_restartTimer){
         _restartTimer = false;
-        _timer->start(200);
+        _timerStatus->start(200);
     }
 }
 
@@ -132,12 +225,12 @@ void MainWindow::on_errorReport(int level, const QString& msg)
 }
 
 
-void MainWindow::updateStatus()
+void MainWindow::_updateStatus()
 {
     CncPosition pos;
     GrblControl::STATUS status = _grbl->getCurrentStatus(pos);
 
-    ui->label_Status->setText(status==GrblControl::Run?   QStringLiteral("run"):
+    ui->label_Status->setText(status==GrblControl::Run?   QStringLiteral("running"):
                               status==GrblControl::Home?  QStringLiteral("homing"):
                               status==GrblControl::Check? QStringLiteral("simulation"):
                               status==GrblControl::Idle?  QStringLiteral("idle"):
@@ -154,24 +247,68 @@ void MainWindow::updateStatus()
     ui->label_MPosY->setText(QString::number(pos.my, 'f', 3));
     ui->label_MPosZ->setText(QString::number(pos.mz, 'f', 3));
 
-    ui->btnKillAlarm->setEnabled(status==GrblControl::Alarm);
+    ui->btnJogL->setEnabled(status==GrblControl::Idle); // X
+    ui->btnJogR->setEnabled(status==GrblControl::Idle);
+    ui->btnJogF->setEnabled(status==GrblControl::Idle); // Y
+    ui->btnJogB->setEnabled(status==GrblControl::Idle);
+    ui->btnJogU->setEnabled(status==GrblControl::Idle); // Z
+    ui->btnJogD->setEnabled(status==GrblControl::Idle);
+
+    ui->comboJogDist->setEnabled(status==GrblControl::Idle);
+
     ui->btnSetOrigin->setEnabled(status==GrblControl::Idle);
     ui->btnHoming->setEnabled(status==GrblControl::Idle);
-    ui->btnCheckMode->setEnabled(status==GrblControl::Idle || status==GrblControl::Check);
-    ui->btnCheckMode->setText(status==GrblControl::Check? QStringLiteral("Operation"):
+
+    ui->btnSimulation->setEnabled(status==GrblControl::Idle || status==GrblControl::Check);
+    ui->btnSimulation->setText(status==GrblControl::Check? QStringLiteral("Operation"):
                                                           QStringLiteral("Simulation"));
 
-    _grbl->issueStatusRequest();
+    ui->btnUnlock->setEnabled(status==GrblControl::Alarm);
+
+    if(_grbl->isActive())
+        _grbl->issueStatusRequest();
+}
+
+
+void MainWindow::_sendGCode()
+{
+    if(!_grbl->isActive() || !_sequencer->isReady())
+        return;
+
+    int queue = _grbl->getQueueSize();
+    if(queue >= 5)
+        return; // already too many commands
+
+    int lineNum;
+    std::string gcode;
+    if(!_sequencer->nextLine(lineNum, gcode)){
+        on_errorReport(0, QString("Program finished"));
+        _timerGCode->stop();
+        _sequencer->rewindProgram();
+        return;
+    }
+
+    _issueCommand(gcode.c_str(), "G-Code");
+
+    if(queue < 3)
+        _timerGCode->start(5);
+    else
+        _timerGCode->start(50);
 }
 
 
 quint32 MainWindow::_issueCommand(const char* code, const QString& name)
 {
-    quint32 id = _grbl->issueCommand(code, name);
+    static char data[128];
+    ::strncpy(data, code, 120);
+    ::strcat(data, "\n");
+
+    quint32 id = _grbl->issueCommand(data, name);
     if(id == 0)
         on_errorReport(1, QString("Cannot issue ") + name);
     else if(GSharpieReportLevel < 0)
-        on_errorReport(-1, QString("Issued ") + name + QStringLiteral(" (") +
-                           QString::number(id) + QStringLiteral(")"));
+        on_errorReport(-1, QString("Issued [") + QString::number(id) + QStringLiteral("] ") +
+                           name + QStringLiteral(" (") + QString(code) + QStringLiteral(")"));
+
     return id;
 }

@@ -6,20 +6,25 @@
 
 void GCodeSequencer::setGrblControl(GrblControl* grbl)
 {
+    _ready = false;
     _grbl = grbl;
+    _interp.EnablePrettyFormat(false); // tight lines, no spaces
 }
 
 
-bool GCodeSequencer::loadProgram(const QString& program)
+bool GCodeSequencer::loadProgram(const QString& program, QString* errorMsg)
 {
+    _ready = false;
     try{
         _interp.Load(program.toStdString());
     }
     catch(std::exception& e){
-        emit report(1, QString("Parsing G# file: ") + e.what());
+        if(errorMsg)
+            *errorMsg = QString(e.what());
         return false;
     }
 
+    _ready = true;
     return true;
 }
 

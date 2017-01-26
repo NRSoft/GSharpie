@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui serialport
+QT       += core gui widgets serialport
 CONFIG   += c++11
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -18,10 +18,15 @@ LIBS += ../../GSharp/lib/libgsharp.a
 SOURCES += main.cpp\
         mainwindow.cpp \
     grblcontrol.cpp \
-    gcodesequencer.cpp
+    gcodesequencer.cpp \
+    gcodeeditor.cpp
 
 HEADERS  += mainwindow.h \
     grblcontrol.h \
-    gcodesequencer.h
+    gcodesequencer.h \
+    gcodeeditor.h
 
 FORMS    += mainwindow.ui
+
+RESOURCES += \
+    gsharpie.qrc

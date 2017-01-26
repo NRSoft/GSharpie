@@ -43,7 +43,7 @@ public:
     bool connectSerialPort(const QString& portName, qint32 baudrate=115200);
     void disconnectSerial();
     inline bool isConnected() const {return _connected;}
-    inline bool isRunning() const {return _connected && !_version.isEmpty();}
+    inline bool isActive() const {return _connected && !_version.isEmpty();}
 
     // any command with 'ok' or 'error' return (everything except '?' and 'ctrl-X')
     // returns command id for references when completed, or 0 if error
@@ -55,6 +55,7 @@ public:
 
     inline const QString& getVersion() const {return _version;}
     inline STATUS getCurrentStatus(CncPosition& pos) const {pos = _position; return _status;}
+    inline int getQueueSize() const {return _commands.size();}
 
 signals:
     void report(int level, const QString& msg); // levels: debug(-), normal(0), errors(+)
