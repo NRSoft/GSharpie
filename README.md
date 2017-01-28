@@ -1,5 +1,5 @@
 # GSharpie
-GLBL-compatible software for executing G# (extended G-code) programs on CNC
+GRBL-compatible software for executing G# (extended G-code) programs on CNC
 
 G# is a macro-programming language for CNC control which extends traditional G-code programming
 by allowing to use variables, conditions, loop executions and subroutine calls.
