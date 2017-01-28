@@ -14,5 +14,6 @@
         <file>icons/unlock.png</file>
         <file>icons/edit.png</file>
         <file>icons/no_edit.png</file>
+        <file>icons/hand.gif</file>
     </qresource>
 </RCC>

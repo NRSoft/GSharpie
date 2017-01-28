@@ -132,11 +132,11 @@ void MainWindow::_loadSequencer(const QString& program)
 {
     QString errorMsg;
     int errorLine = _sequencer->loadProgram(program, &errorMsg);
-    ui->editGCode->enableHighlight(errorLine >= 0);
+    ui->editGCode->enableHighlight(errorLine > 0);
     if(errorLine > 0){
         QTextCursor cursor(ui->editGCode->document()->findBlockByLineNumber(errorLine-1));
         ui->editGCode->setTextCursor(cursor);
-        on_errorReport(1, QString("Parsing g-code line ") + errorMsg);
+        on_errorReport(1, QString("Parsing g-code ") + errorMsg);
     }
     else
         on_errorReport(0, QString("Program is ready to run"));
@@ -273,6 +273,14 @@ void MainWindow::on_btnJogD_clicked()
 }
 
 
+void MainWindow::on_btnSingleCommand_clicked()
+{
+    _issueCommand(ui->editCommand->text().toLatin1().constData(), "User_Command");
+    on_errorReport(0, QString("User command: ") + ui->editCommand->text());
+    ui->editCommand->clear();
+}
+
+
 void MainWindow::on_GrblResponse(GrblCommand cmd)
 {
     for(int i=0; i < cmd.response.size(); ++i)
@@ -365,8 +373,16 @@ void MainWindow::_sendGCode()
 
     int lineNum;
     std::string gcode;
-    if(!_sequencer->nextLine(lineNum, gcode)){
-        on_errorReport(0, QString("Program finished"));
+    QString errorMsg;
+    if(!_sequencer->nextLine(lineNum, gcode, &errorMsg)){
+        if(errorMsg.isEmpty())
+            on_errorReport(0, QString("Program finished"));
+        else{
+            ui->editGCode->enableHighlight(true);
+            QTextCursor cursor(ui->editGCode->document()->findBlockByLineNumber(lineNum-1));
+            ui->editGCode->setTextCursor(cursor);
+            on_errorReport(1, QString("Running g-code ") + errorMsg);
+        }
         _timerGCode->stop();
         _sequencer->rewindProgram();
         return;

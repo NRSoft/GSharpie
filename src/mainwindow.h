@@ -49,6 +49,8 @@ private slots:
 
     void on_btnSave_clicked();
 
+    void on_btnSingleCommand_clicked();
+
 private:
     quint32 _issueCommand(const char* code, const QString& name);
     void _loadSequencer(const QString& program);
