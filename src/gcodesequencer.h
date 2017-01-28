@@ -16,7 +16,9 @@ public:
 
     void setGrblControl(GrblControl* grbl);
 
-    bool loadProgram(const QString& program, QString* errorMsg=nullptr);
+    // returns error line number or 0 if no errors
+    int loadProgram(const QString& program, QString* errorMsg=nullptr);
+
     void rewindProgram();
 
     inline bool isReady() const {return _ready;}

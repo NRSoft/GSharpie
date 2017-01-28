@@ -22,6 +22,8 @@ public:
     void lineNumberAreaPaintEvent(QPaintEvent *event);
     int  lineNumberAreaWidth();
 
+    inline void enableHighlight(bool enable=true) {_highlightEnabled = enable;}
+
 protected:
     void resizeEvent(QResizeEvent *event) override;
 
@@ -32,6 +34,8 @@ private slots:
 
 private:
     QWidget *lineNumberArea;
+
+    bool _highlightEnabled;
 };
 
 

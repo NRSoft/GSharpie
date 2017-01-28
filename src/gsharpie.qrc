@@ -4,7 +4,6 @@
         <file>icons/config.gif</file>
         <file>icons/serial.gif</file>
         <file>icons/sketch.gif</file>
-        <file>icons/edit.gif</file>
         <file>icons/save.gif</file>
         <file>icons/start.gif</file>
         <file>icons/stop.gif</file>
@@ -13,5 +12,7 @@
         <file>icons/home.png</file>
         <file>icons/reset.png</file>
         <file>icons/unlock.png</file>
+        <file>icons/edit.png</file>
+        <file>icons/no_edit.png</file>
     </qresource>
 </RCC>

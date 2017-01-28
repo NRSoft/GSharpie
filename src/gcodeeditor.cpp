@@ -22,7 +22,7 @@ GCodeEditor::GCodeEditor(QWidget *parent) : QPlainTextEdit(parent)
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(highlightCurrentLine()));
 
     updateLineNumberAreaWidth(0);
-    highlightCurrentLine();
+    _highlightEnabled = false;
 }
 
 
@@ -75,21 +75,21 @@ void GCodeEditor::resizeEvent(QResizeEvent *e)
 
 void GCodeEditor::highlightCurrentLine()
 {
-//    QList<QTextEdit::ExtraSelection> extraSelections;
+    QList<QTextEdit::ExtraSelection> extraSelections;
 
-//    if (!isReadOnly()) {
-//        QTextEdit::ExtraSelection selection;
+    if(isReadOnly() && _highlightEnabled){
+        QTextEdit::ExtraSelection selection;
 
-//        QColor lineColor = QColor(Qt::yellow).lighter(160);
+        QColor lineColor = QColor(Qt::yellow).lighter(160);
 
-//        selection.format.setBackground(lineColor);
-//        selection.format.setProperty(QTextFormat::FullWidthSelection, true);
-//        selection.cursor = textCursor();
-//        selection.cursor.clearSelection();
-//        extraSelections.append(selection);
-//    }
+        selection.format.setBackground(lineColor);
+        selection.format.setProperty(QTextFormat::FullWidthSelection, true);
+        selection.cursor = textCursor();
+        selection.cursor.clearSelection();
+        extraSelections.append(selection);
+    }
 
-//    setExtraSelections(extraSelections);
+    setExtraSelections(extraSelections);
 }
 
 
@@ -97,7 +97,7 @@ void GCodeEditor::highlightCurrentLine()
 void GCodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
 {
     QPainter painter(lineNumberArea);
-    painter.fillRect(event->rect(), QColor(224, 224, 224));//lightGray);
+    painter.fillRect(event->rect(), QColor(224, 224, 224));
 
     QTextBlock block = firstVisibleBlock();
     int blockNumber = block.blockNumber();

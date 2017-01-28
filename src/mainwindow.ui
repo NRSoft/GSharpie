@@ -787,7 +787,7 @@
    <widget class="QToolButton" name="btnEdit">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>110</x>
       <y>20</y>
       <width>26</width>
       <height>26</height>
@@ -798,7 +798,7 @@
     </property>
     <property name="icon">
      <iconset resource="gsharpie.qrc">
-      <normaloff>:/icons/icons/edit.gif</normaloff>:/icons/icons/edit.gif</iconset>
+      <normaloff>:/icons/icons/edit.png</normaloff>:/icons/icons/edit.png</iconset>
     </property>
     <property name="autoRaise">
      <bool>true</bool>
@@ -817,7 +817,7 @@
    <widget class="QToolButton" name="btnLoad">
     <property name="geometry">
      <rect>
-      <x>40</x>
+      <x>30</x>
       <y>20</y>
       <width>26</width>
       <height>26</height>
@@ -837,7 +837,7 @@
    <widget class="QToolButton" name="btnSave">
     <property name="geometry">
      <rect>
-      <x>80</x>
+      <x>70</x>
       <y>20</y>
       <width>26</width>
       <height>26</height>
@@ -857,7 +857,7 @@
    <widget class="QToolButton" name="btnStart">
     <property name="geometry">
      <rect>
-      <x>210</x>
+      <x>230</x>
       <y>20</y>
       <width>26</width>
       <height>26</height>
@@ -874,6 +874,22 @@
      <bool>true</bool>
     </property>
    </widget>
+   <widget class="QLabel" name="txtReady">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>23</y>
+      <width>59</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+   </widget>
    <zorder>groupBox</zorder>
    <zorder>txtErrorLog</zorder>
    <zorder>label_Status</zorder>
@@ -888,6 +904,7 @@
    <zorder>btnLoad</zorder>
    <zorder>btnSave</zorder>
    <zorder>btnStart</zorder>
+   <zorder>txtReady</zorder>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>

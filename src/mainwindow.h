@@ -22,7 +22,8 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_btnLoad_clicked();
+    void on_btnLoad_clicked();    
+    void on_btnEdit_clicked();
     void on_btnStart_clicked();
 
     void on_btnSerial_clicked();
@@ -46,8 +47,11 @@ private slots:
     void _updateStatus();
     void _sendGCode();
 
+    void on_btnSave_clicked();
+
 private:
     quint32 _issueCommand(const char* code, const QString& name);
+    void _loadSequencer(const QString& program);
 
 private:
     Ui::MainWindow *ui;
@@ -58,6 +62,7 @@ private:
     GCodeSequencer* _sequencer;
 
     QSettings* _settings;
+    QPalette _paletteNoEdit;
 
     bool _restartTimer;
 };

@@ -2,6 +2,8 @@
 #include <QTime>
 #include <QFile>
 #include <QFileDialog>
+#include <QTextBlock>
+#include <QTextCursor>
 #include "dlgserialport.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
@@ -16,6 +18,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->txtErrorLog->clear();
     ui->btnStart->setEnabled(false);
+    ui->btnSave->setEnabled(false);
     ui->comboJogDist->setCurrentIndex(3);
     ui->editGCode->setReadOnly(true);
 
@@ -62,7 +65,8 @@ void MainWindow::on_btnLoad_clicked()
 {
     QString name = QFileDialog::getOpenFileName(this, QStringLiteral("Open file"), ".",
                         QStringLiteral("G-sharp (*.ngs);;G-code (*.nc);;All files (*.*)"));
-    if(name.isEmpty()) return;
+    if(name.isEmpty())
+        return;
 
     QFile file(name);
     if(!file.open(QFile::ReadOnly | QFile::Text)){
@@ -71,13 +75,75 @@ void MainWindow::on_btnLoad_clicked()
     }
     on_errorReport(0, QString("Opened file ") + name);
 
-    QString errorMsg;
     QString program(file.readAll());
-    if(!_sequencer->loadProgram(program, &errorMsg))
-        on_errorReport(1, QString("Parsing g-code line ") + errorMsg);
-    ui->btnStart->setEnabled(_grbl->isActive() && _sequencer->isReady());
-
     ui->editGCode->setPlainText(program);
+
+    _loadSequencer(program);
+}
+
+
+void MainWindow::on_btnSave_clicked()
+{
+    if(ui->editGCode->document()->isEmpty())
+        return;
+
+    QString name = QFileDialog::getSaveFileName(this, QStringLiteral("Save file"), ".",
+                        QStringLiteral("G-sharp (*.ngs);;G-code (*.nc);;All files (*.*)"));
+    if(name.isEmpty())
+        return;
+
+    QFile file(name);
+    if(!file.open(QIODevice::WriteOnly| QFile::Text)){
+        on_errorReport(1, QString("Cannot open file ") + name + " for writing");
+        return;
+    }
+
+    file.write(ui->editGCode->document()->toPlainText().toLatin1());
+}
+
+
+void MainWindow::on_btnEdit_clicked()
+{
+    if(ui->editGCode->isReadOnly()){
+        ui->editGCode->setReadOnly(false);
+        ui->btnStart->setEnabled(false);
+        ui->btnSave->setEnabled(false);
+        ui->btnEdit->setIcon(QIcon(":/icons/icons/no_edit.png"));
+        ui->txtReady->setText("editing");
+
+        _paletteNoEdit = ui->editGCode->palette();
+        QPalette p = _paletteNoEdit;
+        p.setColor(QPalette::Base, QColor(255, 255, 128, 64));
+        p.setColor(QPalette::Text, Qt::black);
+        ui->editGCode->setPalette(p);
+    }
+    else{
+        ui->editGCode->setReadOnly(true);
+        ui->btnEdit->setIcon(QIcon(":/icons/icons/edit.png"));
+
+        ui->editGCode->setPalette(_paletteNoEdit);
+
+        _loadSequencer(ui->editGCode->document()->toPlainText());
+    }
+}
+
+
+void MainWindow::_loadSequencer(const QString& program)
+{
+    QString errorMsg;
+    int errorLine = _sequencer->loadProgram(program, &errorMsg);
+    ui->editGCode->enableHighlight(errorLine >= 0);
+    if(errorLine > 0){
+        QTextCursor cursor(ui->editGCode->document()->findBlockByLineNumber(errorLine-1));
+        ui->editGCode->setTextCursor(cursor);
+        on_errorReport(1, QString("Parsing g-code line ") + errorMsg);
+    }
+    else
+        on_errorReport(0, QString("Program is ready to run"));
+
+    ui->btnSave->setEnabled(!ui->editGCode->document()->isEmpty());
+    ui->btnStart->setEnabled(_grbl->isActive() && _sequencer->isReady());
+    ui->txtReady->setText(ui->btnStart->isEnabled()? "ready": "");
 }
 
 
