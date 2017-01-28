@@ -32,32 +32,6 @@
    <string>GSharpie</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QPushButton" name="btnStart1">
-    <property name="geometry">
-     <rect>
-      <x>380</x>
-      <y>200</y>
-      <width>80</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Start</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="btnLoad1">
-    <property name="geometry">
-     <rect>
-      <x>290</x>
-      <y>200</y>
-      <width>80</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Load</string>
-    </property>
-   </widget>
    <widget class="QPlainTextEdit" name="txtErrorLog">
     <property name="geometry">
      <rect>
@@ -741,7 +715,7 @@
      <bool>true</bool>
     </property>
    </widget>
-   <widget class="QToolButton" name="toolButton_12">
+   <widget class="QToolButton" name="btnSerial">
     <property name="geometry">
      <rect>
       <x>300</x>
@@ -901,14 +875,12 @@
     </property>
    </widget>
    <zorder>groupBox</zorder>
-   <zorder>btnStart1</zorder>
-   <zorder>btnLoad1</zorder>
    <zorder>txtErrorLog</zorder>
    <zorder>label_Status</zorder>
    <zorder>label_6</zorder>
    <zorder>toolButton_10</zorder>
    <zorder>btnUnlock</zorder>
-   <zorder>toolButton_12</zorder>
+   <zorder>btnSerial</zorder>
    <zorder>btnSimulation</zorder>
    <zorder>btnReset</zorder>
    <zorder>btnEdit</zorder>

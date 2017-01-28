@@ -8,7 +8,7 @@ extern int GSharpieReportLevel;
 GrblControl::GrblControl()
 {
     _port = nullptr;
-    _connected = false;
+    _opened = false;
 
     _status = Undef;
     _position.mx = _position.my = _position.mz = 0.0;
@@ -18,7 +18,7 @@ GrblControl::GrblControl()
 }
 
 
-bool GrblControl::connectSerialPort(const QString& portName, qint32 baudrate)
+bool GrblControl::openSerialPort(const QString& portName, qint32 baudrate)
 {
     _port = new QSerialPort(portName);
     _port->setBaudRate(baudrate);
@@ -32,29 +32,43 @@ bool GrblControl::connectSerialPort(const QString& portName, qint32 baudrate)
     connect(_port, SIGNAL(error(QSerialPort::SerialPortError)),
              this, SLOT(_handlePortError(QSerialPort::SerialPortError)));
 
-    _connected = _port->open(QIODevice::ReadWrite);
+    _opened = _port->open(QIODevice::ReadWrite);
 
-    if(_connected)
+    if(_opened)
         emit report(0, QString("Opened serial port ") + _port->portName());
     else
         emit report(1, QString("Cannot open serial port ") + _port->portName());
 
-    return _connected;
+    return _opened;
 }
 
 
-void GrblControl::disconnectSerial()
+void GrblControl::closeSerialPort()
 {
-    if(GSharpieReportLevel < 0)
-        emit report(-1, QString("Closing serial port ") + _port->portName());
+    if(_port == nullptr)
+        return;
+
     _port->close();
-    _connected=false;
+    _opened=false;
+    _status = Undef;
+    emit report(0, QString("Closed serial port ") + _port->portName());
+}
+
+
+bool GrblControl::getSerialPortInfo(QString& portName, quint32& baudrate)
+{
+    if(_port == nullptr)
+        return false;
+
+    portName = _port->portName();
+    baudrate = _port->baudRate();
+    return true;
 }
 
 
 quint32 GrblControl::issueCommand(const char* cmd, const QString& readableName)
 {
-    if(!_connected)
+    if(!_opened)
         return 0;
 
     if(GSharpieReportLevel < -1)
@@ -76,7 +90,7 @@ quint32 GrblControl::issueCommand(const char* cmd, const QString& readableName)
 
 bool GrblControl::issueReset()
 {
-    if(!_connected)
+    if(!_opened)
         return false;
 
     if(GSharpieReportLevel < 0)
@@ -93,7 +107,7 @@ bool GrblControl::issueReset()
 
 bool GrblControl::issueStatusRequest()
 {
-    if(!_connected)
+    if(!_opened)
         return false;
 
     static char data[2] = {'?', 0}; // "Ctrl-X" character

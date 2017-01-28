@@ -2,6 +2,7 @@
 #include <QTime>
 #include <QFile>
 #include <QFileDialog>
+#include "dlgserialport.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -21,12 +22,19 @@ MainWindow::MainWindow(QWidget *parent) :
     on_errorReport(0, QString("Program started on ") + QDate::currentDate().toString());
 //    GSharpieReportLevel = -1;
 
+    _settings = new QSettings("GSharpie.ini", QSettings::IniFormat);
+
     _grbl = new GrblControl();
     connect(_grbl, SIGNAL(report(int, QString)), this, SLOT(on_errorReport(int, QString)));
     connect(_grbl, SIGNAL(commandComplete(GrblCommand)), this, SLOT(on_GrblResponse(GrblCommand)));
 
-    if(_grbl->connectSerialPort(QStringLiteral("ttyUSB0")))
-        _grbl->issueReset();
+    _settings->beginGroup("Serial_Port");
+    if(_settings->value("open_on_startup", false).toBool()){
+        if(_grbl->openSerialPort(_settings->value("port_name").toString(),
+                                 _settings->value("baud_rate").toInt()))
+            _grbl->issueReset();
+    }
+    _settings->endGroup();
 
     _sequencer = new GCodeSequencer();
     _sequencer->setGrblControl(_grbl);
@@ -45,6 +53,7 @@ MainWindow::~MainWindow()
 {
     delete _sequencer;
     delete _grbl;
+    delete _settings;
     delete ui;
 }
 
@@ -76,6 +85,13 @@ void MainWindow::on_btnStart_clicked()
 {
     on_errorReport(0, QString("Program started"));
     _timerGCode->start(5);
+}
+
+
+void MainWindow::on_btnSerial_clicked()
+{
+    DlgSerialPort dlgPort(_grbl, _settings, this);
+    dlgPort.exec();
 }
 
 
@@ -264,6 +280,8 @@ void MainWindow::_updateStatus()
                                                           QStringLiteral("Simulation"));
 
     ui->btnUnlock->setEnabled(status==GrblControl::Alarm);
+
+    ui->btnReset->setEnabled(_grbl->isOpened());
 
     if(_grbl->isActive())
         _grbl->issueStatusRequest();

@@ -38,12 +38,13 @@ public:
 
 public:
     GrblControl();
-    ~GrblControl() {disconnectSerial();}
+    ~GrblControl() {closeSerialPort();}
 
-    bool connectSerialPort(const QString& portName, qint32 baudrate=115200);
-    void disconnectSerial();
-    inline bool isConnected() const {return _connected;}
-    inline bool isActive() const {return _connected && !_version.isEmpty();}
+    bool openSerialPort(const QString& portName, qint32 baudrate=115200);
+    void closeSerialPort();
+    bool getSerialPortInfo(QString& portName, quint32& baudrate);
+    inline bool isOpened() const {return _opened;}
+    inline bool isActive() const {return _opened && !_version.isEmpty();}
 
     // any command with 'ok' or 'error' return (everything except '?' and 'ctrl-X')
     // returns command id for references when completed, or 0 if error
@@ -72,7 +73,7 @@ private:
     QString _version;
 
     QSerialPort* _port;
-    bool _connected;
+    bool _opened;
 
     QQueue<GrblCommand> _commands;
     QByteArray  _response;
