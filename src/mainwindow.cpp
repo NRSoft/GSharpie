@@ -90,8 +90,14 @@ bool MainWindow::_commandEditingMode() const
 //////  e v e n t  F i l t e r  //////
 bool MainWindow::eventFilter(QObject* obj, QEvent* event)
 {
-    if(_programEditingMode() || _commandEditingMode())
-        return false; // keyboard control is prohibited
+    if(_programEditingMode() || _commandEditingMode() ||
+        qApp->focusWidget() == ui->spin_minX ||
+        qApp->focusWidget() == ui->spin_maxX ||
+        qApp->focusWidget() == ui->spin_minY ||
+        qApp->focusWidget() == ui->spin_maxY ||
+        qApp->focusWidget() == ui->spin_minZ ||
+        qApp->focusWidget() == ui->spin_maxZ)
+            return false; // keyboard control is prohibited
 //return false;
 
     if(event->type()==QEvent::KeyPress){
