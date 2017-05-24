@@ -23,7 +23,7 @@ public:
 
     inline bool isReady() const {return _ready;}
 
-    bool nextLine(int& lineNumber, string& line, QString* errorMsg=nullptr);
+    bool nextLine(int& lineNumber, std::string& line, QString* errorMsg=nullptr);
 
 private:
     GrblControl* _grbl;

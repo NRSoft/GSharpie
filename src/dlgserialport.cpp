@@ -56,7 +56,7 @@ void DlgSerialPort::on_btnOpen_clicked()
     else{
         if(_grbl->openSerialPort(ui->comboPort->currentText(),
                                  ui->comboBaudRate->currentText().toInt()))
-            _grbl->issueReset();
+            _grbl->issueRealtimeCommand(GrblControl::SOFT_RESET);
     }
 
     _ReflectStatus();

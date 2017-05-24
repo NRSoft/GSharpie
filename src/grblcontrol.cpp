@@ -8,11 +8,10 @@ extern int GSharpieReportLevel;
 GrblControl::GrblControl()
 {
     _port = nullptr;
-    _opened = false;
+    _connected = false;
 
-    _status = Undef;
-    _position.mx = _position.my = _position.mz = 0.0;
-    _position.wx = _position.wy = _position.wz = 0.0;
+    _status.state = Undef;
+    _metric = true;
 
     _lastCmdId = 0;
 }
@@ -32,14 +31,15 @@ bool GrblControl::openSerialPort(const QString& portName, qint32 baudrate)
     connect(_port, SIGNAL(error(QSerialPort::SerialPortError)),
              this, SLOT(_handlePortError(QSerialPort::SerialPortError)));
 
-    _opened = _port->open(QIODevice::ReadWrite);
+    _connected = _port->open(QIODevice::ReadWrite);
 
-    if(_opened)
+    if(_connected)
         emit report(0, QString("Opened serial port ") + _port->portName());
     else
-        emit report(1, QString("Cannot open serial port ") + _port->portName());
+        emit report(1, QString("Cannot open serial port ") + _port->portName() +
+                       QString(": ") + _port->errorString());
 
-    return _opened;
+    return _connected;
 }
 
 
@@ -49,8 +49,8 @@ void GrblControl::closeSerialPort()
         return;
 
     _port->close();
-    _opened=false;
-    _status = Undef;
+    _connected=false;
+    _status.state = Undef;
     emit report(0, QString("Closed serial port ") + _port->portName());
 }
 
@@ -66,16 +66,15 @@ bool GrblControl::getSerialPortInfo(QString& portName, quint32& baudrate)
 }
 
 
+////////  i s s u e  C o m m a n d  /////////
 quint32 GrblControl::issueCommand(const char* cmd, const QString& readableName)
 {
-    if(!_opened)
+    if(!isActive())
         return 0;
 
-    if(GSharpieReportLevel < -1)
-        emit report(-2, QString("Sending: ") +
-                        QString(cmd).remove(QRegExp("[\r\n]")));
+    emit report(-2, QString("Sending: ") + QString(cmd).remove(QRegExp("[\r\n]")));
 
-    GrblCommand command;
+    Command command;
     command.id = ++_lastCmdId;
     command.name = readableName;
     command.code.assign(cmd);
@@ -88,33 +87,25 @@ quint32 GrblControl::issueCommand(const char* cmd, const QString& readableName)
 }
 
 
-bool GrblControl::issueReset()
+/////  i s s u e  R e a l t i m e  C o m m a n d  //////
+bool GrblControl::issueRealtimeCommand(REALTIME_COMMAND cmd)
 {
-    if(!_opened)
+    if(!isActive())
         return false;
 
-    if(GSharpieReportLevel < 0)
-        emit report(-1, QString("Resetting Grbl..."));
+    emit report(-2, QString("Issuing realtime Grbl command: 0x") + QString::number(cmd, 16));
 
-    _version.clear(); // to check later if connection is established
-    static char data[2] = {0x18, 0}; // "Ctrl-X" character
-    _port->write(data, 1);
-    _port->waitForBytesWritten(5); // make sure the bytes are written before continuing
+    char data[2] = {static_cast<char>(cmd), 0};
+    if(_port->write(data, 1) == 1 && _port->waitForBytesWritten(5)){
+//        if(cmd != GET_STATUS)
+//            qDebug("To Grbl: 0x%02X", static_cast<uint8_t>(cmd));//data[0]);
+        return true;
+    }
+    else
+        qDebug("Error issuing 0x%02X", static_cast<uint8_t>(cmd));
 
-    return true;
-}
-
-
-bool GrblControl::issueStatusRequest()
-{
-    if(!_opened)
-        return false;
-
-    static char data[2] = {'?', 0}; // "Ctrl-X" character
-    _port->write(data, 1);
-    _port->waitForBytesWritten(5); // make sure the bytes are written before continuing
-
-    return true;
+    emit report(1, QString("Cannot issue realtime Grbl command: 0x") + QString::number(cmd, 16));
+    return false;
 }
 
 
@@ -122,7 +113,7 @@ bool GrblControl::issueStatusRequest()
 bool GrblControl::_sendNextCommand()
 {
     int byteCount = 0;
-    QQueue<GrblCommand>::iterator it;
+    QQueue<Command>::iterator it;
     for(it = _commands.begin(); it != _commands.end(); ++it){
         if(it->sent)
             byteCount += it->code.size();
@@ -139,6 +130,113 @@ bool GrblControl::_sendNextCommand()
 }
 
 
+///////  r e t r i e v e  V e r s i o n  ///////
+bool GrblControl::_retrieveVersion(const QByteArray& line)
+{
+    if(line.size() >= 9){
+        _version = line.mid(5,3).toDouble();
+        if(_version > 0.0){
+            if(_version >= MIN_SUPPORTED_VERSION){
+                emit report(0, QLatin1String("Welcome to ") + line.left(9));
+                return true;
+            }
+            else
+                emit report(1, QLatin1String("Unsupported version ") + line.left(9));
+        }
+        else
+            emit report(1, QString("Unexpected Grbl version format: ") + line.left(9));
+    }
+    else
+        emit report(1, QString("Unexpected Grbl message: ") + line);
+    return false;
+}
+
+
+///////  r e t r i e v e  S t a t u s  ///////
+void GrblControl::_retrieveStatus(const QByteArray& line)
+{
+    // extract internal to <.> data and split into components
+    QList<QByteArray> fields = line.mid(1, line.size()-2).split('|');
+
+    // first field is always Machine State info
+    const char st = fields[0][0];
+         if(st == 'J') _status.state = Jog;
+    else if(st == 'R') _status.state = Run;
+    else if(st == 'H') _status.state = (fields[0][2] == 'm')? Home: Hold;
+    else if(st == 'C') _status.state = Check;
+    else if(st == 'I') _status.state = Idle;
+    else if(st == 'A') _status.state = Alarm;
+    else if(st == 'D') _status.state = Door;
+    else if(st == 'S') _status.state = Sleep;
+    else               _status.state = Undef;
+
+    // process remaining fields
+    enum {UNDEF, MPOS, WPOS} defaultPos = UNDEF;
+    for(auto field = fields.begin()+1; field < fields.end(); ++field){
+        if(field->left(4) == "MPos"){ // Machine position
+            if(_readCoordinates(field->mid(5), _status.pos.mpos))
+                defaultPos = MPOS;
+        }
+        else if(field->left(4) == "WPos"){ // Work position
+            if(_readCoordinates(field->mid(5), _status.pos.wpos))
+                defaultPos = WPOS;
+            defaultPos = WPOS;
+        }
+        else if(field->left(3) == "WCO"){ // Work position
+            _readCoordinates(field->mid(4), _toolOffset);
+        }
+        else if(field->left(2) == "FS"){ // feed rate and spindle speed
+            QList<QByteArray> values = field->mid(3).split(',');
+            if(values.size() >= 2){
+                _status.feedrate = values[0].toInt();
+                _status.spindle = values[1].toInt();
+            }
+        }
+        else if(field->at(0) == 'F'){ // feed rate only, keep it after "FS"
+            _status.feedrate = field->mid(2).toInt();
+        }
+        else if(field->left(2) == "Ln"){ // currently executed g-code line number (N)
+            _status.line = field->mid(3).toInt();
+        }
+        else if(field->left(2) == "Bf"){ // Buffer size (not implemented yet)
+        }
+        else if(field->left(2) == "Pn"){ // Pin state (not implemented yet)
+        }
+        else if(field->left(2) == "Ov"){ // Override (not implemented yet)
+        }
+        else if(field->at(0) == 'A'){ // Accessory state (not implemented yet)
+        }
+        else
+            qDebug() << "Unexpected status field" << *field;
+
+        // calculate relative position
+        if(defaultPos == MPOS)
+            _status.pos.wpos = _status.pos.mpos - _toolOffset;
+        else if(defaultPos == WPOS)
+            _status.pos.mpos = _status.pos.wpos + _toolOffset;
+    }
+
+    emit statusUpdated();
+}
+
+
+//////  r e a d  C o o r d i n a t e s  /////
+bool GrblControl::_readCoordinates(const QByteArray& line, QVector4D& pos)
+{
+    if(line[0] != '-' && !::isdigit(line[0]))
+        return false;
+
+    QList<QByteArray> coordinates = line.split(',');
+    if(coordinates.size() < 3)
+        return false;
+
+    pos.setX(coordinates[0].toDouble());
+    pos.setY(coordinates[1].toDouble());
+    pos.setZ(coordinates[2].toDouble());
+
+    return true;
+}
+
 ///////  h a n d l e  P o r t  R e a d  ////////
 void GrblControl::_handlePortRead()
 {
@@ -147,54 +245,20 @@ void GrblControl::_handlePortRead()
     // process Grbl output line by line
     int lineEnd;
     while((lineEnd = _response.indexOf('\n')) >= 0){
-        QString line(_response.left(lineEnd-1)); // there is "\r\n" pair
-        _response = _response.mid(lineEnd+1);
-//qDebug() << "From Grbl:" << line;
-        if(line[0] == '<'){ // status response to '?' enquiry
-            if(line[1] == 'R')
-                _status = Run;
-            else if(line[1] == 'H')
-                _status = (line[3] == 'm')? Home: Hold;
-            else if(line[1] == 'C')
-                _status = Check;
-            else if(line[1] == 'I')
-                _status = Idle;
-            else if(line[1] == 'A')
-                _status = Alarm;
-            else if(line[1] == 'D')
-                _status = Door;
-            else
-                _status = Undef;
-
-            // TODO: more generic parsing, the current format may change
-            size_t mposX = line.indexOf(',') + 6;
-            size_t mposY = line.indexOf(',', mposX) + 1;
-            size_t mposZ = line.indexOf(',', mposY) + 1;
-            size_t lastM = line.indexOf(',', mposZ);
-            size_t wposX = lastM + 6;
-            size_t wposY = line.indexOf(',', wposX) + 1;
-            size_t wposZ = line.indexOf(',', wposY) + 1;
-            size_t lastW = line.indexOf('>', wposZ);
-
-            _position.mx = line.mid(mposX, mposY-mposX-1).toDouble();
-            _position.my = line.mid(mposY, mposZ-mposY-1).toDouble();
-            _position.mz = line.mid(mposZ, lastM-mposZ).toDouble();
-
-            _position.wx = line.mid(wposX, wposY-wposX-1).toDouble();
-            _position.wy = line.mid(wposY, wposZ-wposY-1).toDouble();
-            _position.wz = line.mid(wposZ, lastW-wposZ).toDouble();
+        QByteArray line(_response.left(lineEnd-1)); // there is "\r\n" pair
+        _response = _response.mid(lineEnd+1); // fast forward to the next line
+        if(line.size()>=4 && line.left(4) == QStringLiteral("Grbl")){ // after reset
+            _retrieveVersion(line);
         }
-        else if(line.left(4) == QStringLiteral("Grbl")){ // after reset
-            int last  = line.indexOf('[');
-            _version = line.left(last);
-            emit report(0, QString("Welcome to ") + _version);
+        else if(line[0] == '<'){ // CNC status response
+            _retrieveStatus(line);
         }
         else{ // other commands
+//qDebug("From Grbl: %s", line.toStdString().c_str());
             if(!_commands.isEmpty()){
-                if(GSharpieReportLevel < -1)
-                    emit report(-2, QString("Grbl message: ") + line);
+                emit report(-2, QString("Grbl message: ") + line);
 
-                GrblCommand& cmd = _commands.head();
+                Command& cmd = _commands.head();
                 if(line[0] == 'o' || line[0] == 'e' || line[0] == 'A'){ // 'ok', 'error' or 'ALARM'
                     if(line[0] == 'e' || line[0] == 'A')
                         cmd.error = line.mid(7); // everything after ':'
@@ -205,7 +269,7 @@ void GrblControl::_handlePortRead()
                 else
                     cmd.response.append(line);
             }
-            else if(GSharpieReportLevel < -1)
+            else
                 emit report(-2, QString("Grbl message without command: ") + line);
         }
     }

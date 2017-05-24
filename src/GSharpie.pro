@@ -20,7 +20,8 @@ SOURCES += main.cpp\
     grblcontrol.cpp \
     gcodesequencer.cpp \
     gcodeeditor.cpp \
-    dlgserialport.cpp
+    dlgserialport.cpp \
+    jogging.cpp
 
 HEADERS  += mainwindow.h \
     grblcontrol.h \
