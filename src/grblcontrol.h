@@ -64,6 +64,31 @@ public: // type definitions
         QStringList response; // information lines
     };
 
+    struct Config
+    {
+        double junctionDeviation; // $11
+        double arcTolerance; // $12
+        double homingFeed; // slower, $24
+        double homingSeek; // faster, $25
+        double homingPullOff; // mm, $27
+        double stepsPerMm[4]; // $100-102 (103 for A?)
+        double maxFeedRate[4]; // $110-112 (113 for A?)
+        double acceleration[4]; // $120-122 (123 for A?)
+        double maxTravel[4]; // $130-132 (133 for A?)
+        uint32_t minSpindleSpeed; // rpm, $31
+        uint32_t maxnSpindleSpeed; // rpm, $30
+        uint8_t stepPulse; // uSec, $0
+        uint8_t stepIdleDelay; // uSec, $1
+        uint8_t directionInvertMask; // $3
+        uint8_t homingDirInvertMask; // $23
+        uint8_t homingDebounce; // mSec, $26
+        bool stepEnableInvert; // polarity of the "Step Enuble" pin, $4
+        bool limitSwitchInvert; // polarity of the limit switch pin, $5
+        bool probePinInvert; // polarity of the probe pin, $6
+        bool imperial; // units: [false] metric (mm) or [true] imperial (inches), $13
+
+    };
+
 public:
     GrblControl();
     ~GrblControl() {closeSerialPort();}
@@ -83,6 +108,7 @@ public:
 
 //    inline const QString& getVersion() const {return _version;}
 //    inline MACHINE_STATE getCurrentStatus(Status& status) const {status = _status; return _status.state;}
+    inline const Config& getConfiguration() const {return _config;}
     inline const Status& getCurrentStatus() const {return _status;}
     inline int getQueueSize() const {return _commands.size();}
     inline void clearQueue() {_port->clear(QSerialPort::Output); _commands.clear();}
@@ -113,7 +139,7 @@ private:
     const double MIN_SUPPORTED_VERSION = 1.1;
     double _version;
 
-    bool _metric; // units: [true] metric (mm) or [false] imperial (inches)
+    Config _config;
     double _joggingFeedrate; // before adjustment coefficient is applied
 
     Status _status;

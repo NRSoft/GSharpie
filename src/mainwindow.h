@@ -9,6 +9,11 @@
 #include "gcodesequencer.h"
 
 
+struct CncConfig
+{
+
+};
+
 namespace Ui {
 class MainWindow;
 }
@@ -78,6 +83,8 @@ private slots:
     void on_btn_saveGCode_clicked();
 
     void on_btn_editGCode_clicked();
+
+    void on_btn_settings_clicked();
 
 private:
     quint32 _issueCommand(const char* code, const QString& name);

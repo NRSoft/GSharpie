@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1043</width>
-    <height>427</height>
+    <width>1040</width>
+    <height>440</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -37,8 +37,8 @@
      <rect>
       <x>290</x>
       <y>270</y>
-      <width>581</width>
-      <height>101</height>
+      <width>561</width>
+      <height>111</height>
      </rect>
     </property>
     <property name="font">
@@ -84,7 +84,7 @@
     <widget class="QLabel" name="label_4">
      <property name="geometry">
       <rect>
-       <x>170</x>
+       <x>150</x>
        <y>30</y>
        <width>51</width>
        <height>21</height>
@@ -994,13 +994,105 @@
       <set>Qt::AlignCenter</set>
      </property>
     </widget>
+    <widget class="QComboBox" name="comboBox">
+     <property name="geometry">
+      <rect>
+       <x>200</x>
+       <y>30</y>
+       <width>51</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <item>
+      <property name="text">
+       <string>G54</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>G55</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>G56</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>G57</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>G58</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>G59</string>
+      </property>
+     </item>
+    </widget>
+    <zorder>label_7</zorder>
+    <zorder>label_4</zorder>
+    <zorder>label_5</zorder>
+    <zorder>label_WPosX</zorder>
+    <zorder>label_WPosY</zorder>
+    <zorder>label_WPosZ</zorder>
+    <zorder>label</zorder>
+    <zorder>label_2</zorder>
+    <zorder>label_3</zorder>
+    <zorder>label_MPosZ</zorder>
+    <zorder>label_MPosY</zorder>
+    <zorder>label_MPosX</zorder>
+    <zorder>label_9</zorder>
+    <zorder>btn_jogLeft</zorder>
+    <zorder>btn_jogRight</zorder>
+    <zorder>label_8</zorder>
+    <zorder>btn_jogBackward</zorder>
+    <zorder>label_11</zorder>
+    <zorder>btn_jogForward</zorder>
+    <zorder>label_10</zorder>
+    <zorder>btn_jogUp</zorder>
+    <zorder>btn_jogDown</zorder>
+    <zorder>btn_setXOrigin</zorder>
+    <zorder>btn_setYOrigin</zorder>
+    <zorder>btn_setZOrigin</zorder>
+    <zorder>label_13</zorder>
+    <zorder>line</zorder>
+    <zorder>line_2</zorder>
+    <zorder>btn_homing</zorder>
+    <zorder>btn_setXYZOrigin</zorder>
+    <zorder>label_14</zorder>
+    <zorder>btn_setMinLimit</zorder>
+    <zorder>spin_minX</zorder>
+    <zorder>spin_minY</zorder>
+    <zorder>spin_minZ</zorder>
+    <zorder>spin_maxX</zorder>
+    <zorder>btn_setMaxLimit</zorder>
+    <zorder>spin_maxZ</zorder>
+    <zorder>spin_maxY</zorder>
+    <zorder>check_obeyLimits</zorder>
+    <zorder>dial_jogFeed</zorder>
+    <zorder>label_jogFeed</zorder>
+    <zorder>line_4</zorder>
+    <zorder>label_15</zorder>
+    <zorder>comboBox</zorder>
+    <zorder>comboBox</zorder>
    </widget>
    <widget class="QLabel" name="label_status">
     <property name="geometry">
      <rect>
-      <x>510</x>
+      <x>440</x>
       <y>15</y>
-      <width>111</width>
+      <width>311</width>
       <height>20</height>
      </rect>
     </property>
@@ -1023,7 +1115,7 @@
    <widget class="QLabel" name="label_6">
     <property name="geometry">
      <rect>
-      <x>440</x>
+      <x>380</x>
       <y>15</y>
       <width>51</width>
       <height>20</height>
@@ -1046,7 +1138,7 @@
    <widget class="QToolButton" name="btn_settings">
     <property name="geometry">
      <rect>
-      <x>340</x>
+      <x>820</x>
       <y>10</y>
       <width>26</width>
       <height>26</height>
@@ -1069,7 +1161,7 @@
    <widget class="QToolButton" name="btn_unlock">
     <property name="geometry">
      <rect>
-      <x>630</x>
+      <x>300</x>
       <y>10</y>
       <width>26</width>
       <height>26</height>
@@ -1092,7 +1184,7 @@
    <widget class="QToolButton" name="btn_serial">
     <property name="geometry">
      <rect>
-      <x>300</x>
+      <x>780</x>
       <y>10</y>
       <width>26</width>
       <height>26</height>
@@ -1115,7 +1207,7 @@
    <widget class="QToolButton" name="btn_simulation">
     <property name="geometry">
      <rect>
-      <x>380</x>
+      <x>860</x>
       <y>10</y>
       <width>26</width>
       <height>26</height>
@@ -1138,7 +1230,7 @@
    <widget class="QToolButton" name="btn_reset">
     <property name="geometry">
      <rect>
-      <x>670</x>
+      <x>340</x>
       <y>10</y>
       <width>26</width>
       <height>26</height>
@@ -1187,7 +1279,7 @@
       <x>20</x>
       <y>60</y>
       <width>251</width>
-      <height>341</height>
+      <height>361</height>
      </rect>
     </property>
    </widget>
@@ -1280,7 +1372,7 @@
     <property name="geometry">
      <rect>
       <x>430</x>
-      <y>383</y>
+      <y>393</y>
       <width>211</width>
       <height>21</height>
      </rect>
@@ -1293,7 +1385,7 @@
     <property name="geometry">
      <rect>
       <x>660</x>
-      <y>380</y>
+      <y>390</y>
       <width>26</width>
       <height>26</height>
      </rect>
@@ -1313,7 +1405,7 @@
     <property name="geometry">
      <rect>
       <x>298</x>
-      <y>383</y>
+      <y>393</y>
       <width>111</width>
       <height>21</height>
      </rect>
@@ -1322,39 +1414,127 @@
      <string>Manual command:</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_16">
+   <widget class="QLabel" name="label_units">
     <property name="geometry">
      <rect>
-      <x>910</x>
-      <y>270</y>
-      <width>111</width>
-      <height>21</height>
+      <x>960</x>
+      <y>15</y>
+      <width>61</width>
+      <height>20</height>
      </rect>
     </property>
+    <property name="font">
+     <font>
+      <family>FreeSans</family>
+      <pointsize>11</pointsize>
+      <weight>75</weight>
+      <italic>false</italic>
+      <bold>true</bold>
+     </font>
+    </property>
     <property name="text">
-     <string>verbosity</string>
+     <string>inches</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_17">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>15</y>
+      <width>51</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>FreeSans</family>
+      <pointsize>11</pointsize>
+      <italic>true</italic>
+     </font>
+    </property>
+    <property name="text">
+     <string>uints:</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_16">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>270</y>
+      <width>91</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>36</pointsize>
+      <weight>75</weight>
+      <italic>true</italic>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>G#</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
     </property>
    </widget>
-   <widget class="QSlider" name="horizontalSlider">
+   <widget class="QLabel" name="label_18">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
-      <x>920</x>
-      <y>300</y>
-      <width>91</width>
-      <height>20</height>
+      <x>870</x>
+      <y>330</y>
+      <width>141</width>
+      <height>21</height>
      </rect>
     </property>
-    <property name="minimum">
-     <number>-2</number>
+    <property name="font">
+     <font>
+      <italic>true</italic>
+     </font>
     </property>
-    <property name="maximum">
-     <number>2</number>
+    <property name="text">
+     <string>Free &amp; Open Source</string>
     </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_19">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>860</x>
+      <y>350</y>
+      <width>171</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <italic>true</italic>
+     </font>
+    </property>
+    <property name="text">
+     <string>https://github.com/nrsoft</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
     </property>
    </widget>
    <zorder>groupBox</zorder>
@@ -1375,8 +1555,11 @@
    <zorder>edit_singleCommand</zorder>
    <zorder>btn_singleCommand</zorder>
    <zorder>label_12</zorder>
+   <zorder>label_units</zorder>
+   <zorder>label_17</zorder>
    <zorder>label_16</zorder>
-   <zorder>horizontalSlider</zorder>
+   <zorder>label_18</zorder>
+   <zorder>label_19</zorder>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>

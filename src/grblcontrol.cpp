@@ -11,7 +11,8 @@ GrblControl::GrblControl()
     _connected = false;
 
     _status.state = Undef;
-    _metric = true;
+
+    _config.imperial = false;
 
     _lastCmdId = 0;
 }

@@ -7,6 +7,7 @@
 #include <QTextCursor>
 #include <QStyleOptionSlider>
 #include "dlgserialport.h"
+#include "dlgconfig.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -98,7 +99,7 @@ bool MainWindow::eventFilter(QObject* obj, QEvent* event)
         qApp->focusWidget() == ui->spin_minZ ||
         qApp->focusWidget() == ui->spin_maxZ)
             return false; // keyboard control is prohibited
-//return false;
+return false;
 
     if(event->type()==QEvent::KeyPress){
         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
@@ -265,6 +266,13 @@ void MainWindow::on_btn_serial_clicked()
 {
     DlgSerialPort dlgPort(_grbl, _settings, this);
     dlgPort.exec();
+}
+
+
+void MainWindow::on_btn_settings_clicked()
+{
+    DlgConfig dlgConfig;
+    dlgConfig.exec();
 }
 
 

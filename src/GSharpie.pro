@@ -21,16 +21,19 @@ SOURCES += main.cpp\
     gcodesequencer.cpp \
     gcodeeditor.cpp \
     dlgserialport.cpp \
-    jogging.cpp
+    jogging.cpp \
+    dlgconfig.cpp
 
 HEADERS  += mainwindow.h \
     grblcontrol.h \
     gcodesequencer.h \
     gcodeeditor.h \
-    dlgserialport.h
+    dlgserialport.h \
+    dlgconfig.h
 
 FORMS    += mainwindow.ui \
-    dlgserialport.ui
+    dlgserialport.ui \
+    dlgconfig.ui
 
 RESOURCES += \
     gsharpie.qrc
