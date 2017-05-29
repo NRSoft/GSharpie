@@ -69,11 +69,8 @@ private slots:
 
     void on_btn_unlock_clicked();
 
-    void on_btn_simulation_clicked();
+    //void on_btn_simulation_clicked();
 
-    //    void on_btnLoad_clicked();
-    //    void on_btnSave_clicked();
-    //    void on_btnEdit_clicked();
     void on_btn_runGCode_clicked();
 
     void on_btn_singleCommand_clicked();
@@ -86,16 +83,23 @@ private slots:
 
     void on_btn_settings_clicked();
 
+    void on_edit_singleCommand_returnPressed();
+
+    void on_combo_toolOffset_currentIndexChanged(const QString &arg1);
+
 private:
-    quint32 _issueCommand(const char* code, const QString& name);
     void _loadSequencer(const QString& program);
 
     bool _programEditingMode() const;
     bool _commandEditingMode() const;
 
+    void _initMainControls();
+
     void _initJoggingControls();
     void _prepareJogCommand(char axis, double limit);
     void _cancelJogging();
+    void _setJogRate(int value);
+    int _pos2Rate(int pos);
 
 private:
     Ui::MainWindow *ui;
@@ -118,7 +122,6 @@ private:
     bool _keyMetaPressed; // "windows" key
 
     int _jogRate;
-    int _defaultJogDialPosition; // loaded from settings
     bool _isJogging; // faster than reading status from grbl
     char _jogCommand[32];
 };

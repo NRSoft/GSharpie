@@ -12,7 +12,10 @@ GrblControl::GrblControl()
 
     _status.state = Undef;
 
-    _config.imperial = false;
+    memset(&_config, 0, sizeof(Config));
+
+    _seekRate = 500; // default, will be overwritten from ini-file
+    _feedRate = 100;
 
     _lastCmdId = 0;
 }
@@ -70,20 +73,27 @@ bool GrblControl::getSerialPortInfo(QString& portName, quint32& baudrate)
 ////////  i s s u e  C o m m a n d  /////////
 quint32 GrblControl::issueCommand(const char* cmd, const QString& readableName)
 {
-    if(!isActive())
+    if(!isActive()){
+        emit report(1, "Cannot issue " + readableName);
         return 0;
+    }
 
-    emit report(-2, QString("Sending: ") + QString(cmd).remove(QRegExp("[\r\n]")));
+    static char data[128];
+    ::strncpy(data, cmd, 120);
+    ::strcat(data, "\n");
 
     Command command;
     command.id = ++_lastCmdId;
     command.name = readableName;
-    command.code.assign(cmd);
+    command.code.assign(data);
     command.sent = false;
     _commands.enqueue(command);
 
+    emit report(-2, QString("Sending: ") + QString(cmd));
     _sendNextCommand();
 
+    emit report(-1, QString("Issued [") + QString::number(command.id) + QStringLiteral("] ") +
+                command.name + QStringLiteral(" (") + QString(cmd) + QStringLiteral(")"));
     return command.id;
 }
 
@@ -94,7 +104,10 @@ bool GrblControl::issueRealtimeCommand(REALTIME_COMMAND cmd)
     if(!isActive())
         return false;
 
-    emit report(-2, QString("Issuing realtime Grbl command: 0x") + QString::number(cmd, 16));
+    if(cmd != GET_STATUS)
+        emit report(-2, QString("Issuing realtime Grbl command: 0x") + QString::number(cmd, 16));
+    else
+        emit report(-3, QString("Issuing Grbl status command: 0x") + QString::number(cmd, 16));
 
     char data[2] = {static_cast<char>(cmd), 0};
     if(_port->write(data, 1) == 1 && _port->waitForBytesWritten(5)){
@@ -139,6 +152,10 @@ bool GrblControl::_retrieveVersion(const QByteArray& line)
         if(_version > 0.0){
             if(_version >= MIN_SUPPORTED_VERSION){
                 emit report(0, QLatin1String("Welcome to ") + line.left(9));
+                issueCommand("$$", "Retrieve Parameters");
+                issueCommand("$N", "Retrieve Startup Block");
+                setSeekRate(_seekRate);
+                setFeedRate(_feedRate);
                 return true;
             }
             else
@@ -238,6 +255,297 @@ bool GrblControl::_readCoordinates(const QByteArray& line, QVector4D& pos)
     return true;
 }
 
+
+//////  r e t r i e v e  P a r a m e t e r  //////
+bool GrblControl::_retrieveParameter(const QByteArray& line)
+{
+    QList<QByteArray> fields = line.mid(1).split('='); // remove '$'
+    if(fields.size() == 2 && fields[0].size() >= 1 && fields[0].size() <= 3){
+        if(fields[0].at(0) == 'N'){ // startup block
+            emit report(-1, QString("Processing startup block line: ") + line);
+            if(fields[0].at(1) == '0')
+                _startup[0] = fields[1];
+            else if(fields[0].at(1) == '1')
+                _startup[1] = fields[1];
+            else
+                emit report(1, "Unexpected startup block #%c" + fields[0].at(1));
+            return true;
+        }
+        else if(::isdigit(fields[0].at(0))){
+            emit report(-1, QString("Processing parameter #") + fields[0] + QString(", value = ") + fields[1]);
+            bool ok;
+            int id = fields[0].toInt(&ok); // parameter id
+            if(ok){
+                int value;
+                double valueDbl;
+                switch (id){
+                    case 0:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.stepPulse = value;
+                        break;
+
+                    case 1:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.stepIdleDelay = value;
+                        break;
+
+                    case 3:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.directionInvertMask = value;
+                        break;
+
+                    case 4:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.stepEnableInvert = (value!=0);
+                        break;
+
+                    case 5:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.limitSwitchInvert = (value!=0);
+                        break;
+
+                    case 6:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.probePinInvert = (value!=0);
+                        break;
+
+                    case 11:
+                        valueDbl = fields[1].toDouble(&ok);
+                        if(ok) _config.junctionDeviation = valueDbl;
+                        break;
+
+                    case 12:
+                        valueDbl = fields[1].toDouble(&ok);
+                        if(ok) _config.arcTolerance = valueDbl;
+                        break;
+
+                    case 13:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.imperial = (value!=0);
+                        break;
+
+                    case 22:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.homingEnable = (value!=0);
+                        break;
+
+                    case 23:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.homingDirInvertMask = value;
+                        break;
+
+                    case 24:
+                        valueDbl = fields[1].toDouble(&ok);
+                        if(ok) _config.homingFeed = valueDbl;
+                        break;
+
+                    case 25:
+                        valueDbl = fields[1].toDouble(&ok);
+                        if(ok) _config.homingSeek = valueDbl;
+                        break;
+
+                    case 26:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.homingDebounce = value;
+                        break;
+
+                    case 27:
+                        valueDbl = fields[1].toDouble(&ok);
+                        if(ok) _config.homingPullOff = valueDbl;
+                        break;
+
+                    case 30:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.maxSpindleSpeed = value;
+                        break;
+
+                    case 31:
+                        value = fields[1].toInt(&ok);
+                        if(ok) _config.minSpindleSpeed = value;
+                        break;
+
+                    case 100:
+                    case 101:
+                    case 102:
+                        valueDbl = fields[1].toDouble(&ok);
+                        if(ok) _config.stepsPerMm[id-100] = valueDbl;
+                        break;
+
+                    case 110:
+                    case 111:
+                    case 112:
+                        valueDbl = fields[1].toDouble(&ok);
+                        if(ok) _config.maxFeedRate[id-110] = valueDbl;
+                        break;
+
+                    case 120:
+                    case 121:
+                    case 122:
+                        valueDbl = fields[1].toDouble(&ok);
+                        if(ok) _config.acceleration[id-120] = valueDbl;
+                        break;
+
+                    case 130:
+                    case 131:
+                    case 132:
+                        valueDbl = fields[1].toDouble(&ok);
+                        if(ok) _config.maxTravel[id-130] = valueDbl;
+                        break;
+                }
+                if(ok)
+                    return true;
+            }
+        }
+    }
+
+    emit report(1, QString("Unrecognised Grbl parameter line: ") + line);
+    return false;
+}
+
+
+//////  u p d a t e  C o n f i g u r a t i o n  //////
+void GrblControl::updateConfiguration(const Config& conf)
+{
+    if(!isActive())
+        return;
+
+    char cmd[32];
+    const char xyz[4] = "XYZ";
+
+    if(conf.stepPulse != _config.stepPulse){
+        ::sprintf(cmd, "$0=%d", conf.stepPulse);
+        issueCommand(cmd, "Step pulse");
+    }
+    if(conf.stepIdleDelay != _config.stepIdleDelay){
+        ::sprintf(cmd, "$1=%d", conf.stepIdleDelay);
+        issueCommand(cmd, "Step idle delay");
+    }
+    if(conf.directionInvertMask != _config.directionInvertMask){
+        ::sprintf(cmd, "$3=%d", conf.directionInvertMask);
+        issueCommand(cmd, "Invert direction");
+    }
+
+    if(conf.stepEnableInvert != _config.stepEnableInvert){
+        ::sprintf(cmd, "$4=%d", conf.stepEnableInvert);
+        issueCommand(cmd, "Invert stepEn");
+    }
+    if(conf.limitSwitchInvert != _config.limitSwitchInvert){
+        ::sprintf(cmd, "$5=%d", conf.limitSwitchInvert);
+        issueCommand(cmd, "Invert limit switch");
+    }
+    if(conf.probePinInvert != _config.probePinInvert){
+        ::sprintf(cmd, "$6=%d", conf.probePinInvert);
+        issueCommand(cmd, "Invert probe pin");
+    }
+
+    if(conf.junctionDeviation != _config.junctionDeviation){
+        ::sprintf(cmd, "$11=%.1f", conf.junctionDeviation);
+        issueCommand(cmd, QString("Junction dev"));
+    }
+    if(conf.arcTolerance != _config.arcTolerance){
+        ::sprintf(cmd, "$12=%.1f", conf.arcTolerance);
+        issueCommand(cmd, QString("Arc tolerance"));
+    }
+    if(conf.imperial != _config.imperial){
+        ::sprintf(cmd, "$13=%d", conf.imperial);
+        issueCommand(cmd, "Set units");
+    }
+
+    if(conf.homingEnable != _config.homingEnable){
+        ::sprintf(cmd, "$22=%d", conf.homingEnable);
+        issueCommand(cmd, "Enable homing");
+    }
+    if(conf.homingDirInvertMask != _config.homingDirInvertMask){
+        ::sprintf(cmd, "$23=%d", conf.homingDirInvertMask);
+        issueCommand(cmd, "Invert homing dir");
+    }
+    if(conf.homingFeed != _config.homingFeed){
+        ::sprintf(cmd, "$24=%.1f", conf.homingFeed);
+        issueCommand(cmd, QString("Homing feed"));
+    }
+    if(conf.homingSeek != _config.homingSeek){
+        ::sprintf(cmd, "$25=%.1f", conf.homingSeek);
+        issueCommand(cmd, QString("Homing seek"));
+    }
+    if(conf.homingDebounce != _config.homingDebounce){
+        ::sprintf(cmd, "$26=%d", conf.homingDebounce);
+        issueCommand(cmd, "Homing debounce");
+    }
+    if(conf.homingPullOff != _config.homingPullOff){
+        ::sprintf(cmd, "$27=%.1f", conf.homingPullOff);
+        issueCommand(cmd, QString("Homing pull-off"));
+    }
+
+    if(conf.maxSpindleSpeed != _config.maxSpindleSpeed){
+        ::sprintf(cmd, "$30=%d", conf.maxSpindleSpeed);
+        issueCommand(cmd, "Max spindle speed");
+    }
+    if(conf.minSpindleSpeed != _config.minSpindleSpeed){
+        ::sprintf(cmd, "$31=%d", conf.minSpindleSpeed);
+        issueCommand(cmd, "Min spindle speed");
+    }
+
+    for(int i=0; i<3; ++i){
+        if(conf.stepsPerMm[i] != _config.stepsPerMm[i]){
+            ::sprintf(cmd, "$10%d=%.1f", i, conf.stepsPerMm[i]);
+            issueCommand(cmd, QString("Steps per mm ") + xyz[i]);
+        }
+        if(conf.maxFeedRate[i] != _config.maxFeedRate[i]){
+            ::sprintf(cmd, "$11%d=%.1f", i, conf.maxFeedRate[i]);
+            issueCommand(cmd, QString("Max feedrate ") + xyz[i]);
+        }
+        if(conf.acceleration[i] != _config.acceleration[i]){
+            ::sprintf(cmd, "$12%d=%.1f", i, conf.acceleration[i]);
+            issueCommand(cmd, QString("Acceleration ") + xyz[i]);
+        }
+        if(conf.maxTravel[i] != _config.maxTravel[i]){
+            ::sprintf(cmd, "$13%d=%.1f", i, conf.maxTravel[i]);
+            issueCommand(cmd, QString("Max travel ") + xyz[i]);
+        }
+    }
+
+    _config = conf;
+}
+
+
+//////  u p d a t e  S t a r t u p  B l o c k  //////
+void GrblControl::updateStartupBlock(const char* block, uint32_t n)
+{
+    if(!isActive() || n > 1)
+        return;
+
+    char cmd[64];
+    ::sprintf(cmd, "SN%d=%s", n, block);
+    issueCommand(cmd, QString("Startup block ") + QString::number(n));
+}
+
+
+void GrblControl::setSeekRate(int rate)
+{
+    _seekRate = rate;
+
+    if(!isActive())
+        return;
+
+    char cmd[32];
+    ::sprintf(cmd, "G0F%d", _seekRate);
+    issueCommand(cmd, QString("Seek rate"));
+}
+
+
+void GrblControl::setFeedRate(int rate)
+{
+    _feedRate = rate;
+
+    if(!isActive())
+        return;
+
+    char cmd[32];
+    ::sprintf(cmd, "G1F%d", _feedRate);
+    issueCommand(cmd, QString("Feed rate"));
+}
+
+
 ///////  h a n d l e  P o r t  R e a d  ////////
 void GrblControl::_handlePortRead()
 {
@@ -249,13 +557,18 @@ void GrblControl::_handlePortRead()
         QByteArray line(_response.left(lineEnd-1)); // there is "\r\n" pair
         _response = _response.mid(lineEnd+1); // fast forward to the next line
         if(line.size()>=4 && line.left(4) == QStringLiteral("Grbl")){ // after reset
+            emit report(-1, QString("Retrieveing grbl version from line: ") + line);
             _retrieveVersion(line);
         }
         else if(line[0] == '<'){ // CNC status response
+            emit report(-3, QString("Retrieveing grbl status from line: ") + line);
             _retrieveStatus(line);
         }
+        else if(line[0] == '$'){ // parameters
+//            emit report(-1, QString("Retrieveing grbl parameter from line: ") + line);
+            _retrieveParameter(line);
+        }
         else{ // other commands
-//qDebug("From Grbl: %s", line.toStdString().c_str());
             if(!_commands.isEmpty()){
                 emit report(-2, QString("Grbl message: ") + line);
 
@@ -267,7 +580,7 @@ void GrblControl::_handlePortRead()
                     emit commandComplete(_commands.dequeue());
                     _sendNextCommand();
                 }
-                else
+                else if(line[0] != '[')
                     cmd.response.append(line);
             }
             else

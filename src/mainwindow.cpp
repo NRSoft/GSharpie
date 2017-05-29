@@ -21,21 +21,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->text_errorLog->clear();
 
-    ui->btn_runGCode->setEnabled(false);
-    ui->btn_saveGCode->setEnabled(false);
-    ui->edit_textGCode->setReadOnly(true);
-    ui->label_stateGCode->clear();
-
-    _initJoggingControls();
-
-    _keyShiftPressed = false;
-    _keyCtrlPressed  = false;
-    _keyAltPressed   = false;
-    _keyMetaPressed  = false;
-
-
     on_errorReport(0, QString("Program started on ") + QDate::currentDate().toString());
-//    GSharpieReportLevel = -1;
+//GSharpieReportLevel = -1;
 
     _grbl = new GrblControl();
     connect(_grbl, SIGNAL(report(int, QString)), this, SLOT(on_errorReport(int, QString)));
@@ -44,6 +31,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     _sequencer = new GCodeSequencer();
     _sequencer->setGrblControl(_grbl);
+
+    _timerGCode = new QTimer(this); // sequencer timer
+    connect(_timerGCode, SIGNAL(timeout()), this, SLOT(_sendGCode()));
 
     _settings = new QSettings("GSharpie.ini", QSettings::IniFormat);
 
@@ -55,22 +45,33 @@ MainWindow::MainWindow(QWidget *parent) :
     }
     _settings->endGroup();
 
-    _timerGCode = new QTimer(this);
-    connect(_timerGCode, SIGNAL(timeout()), this, SLOT(_sendGCode()));
+    _settings->beginGroup("CNC_Control");
+    _grbl->setSeekRate(_settings->value("seek_rate", 500).toInt());
+    _grbl->setFeedRate(_settings->value("feed_rate", 100).toInt());
+    _statusTimerPeriod = 1000 / _settings->value("refresh_rate", 5).toInt(); // careful with high refresh rates!
+    _settings->endGroup();
 
-    _statusTimerPeriod = 200; // 5Hz as default, can we make it faster?
-    _timerStatus = new QTimer(this);
+    _timerStatus = new QTimer(this); // status timer
     connect(_timerStatus, SIGNAL(timeout()), this, SLOT(_statusRequest()));
     connect(_grbl, SIGNAL(statusUpdated()), this, SLOT(_updateStatus()));
     _timerStatus->start(_statusTimerPeriod);
     _restartTimer = false;
+
+    _initMainControls();
+
+    _initJoggingControls();
+
+    _keyShiftPressed = false;
+    _keyCtrlPressed  = false;
+    _keyAltPressed   = false;
+    _keyMetaPressed  = false;
 
     qApp->installEventFilter(this);
 }
 
 
 MainWindow::~MainWindow()
-{
+{    
     delete _sequencer;
     delete _grbl;
     delete _settings;
@@ -99,7 +100,7 @@ bool MainWindow::eventFilter(QObject* obj, QEvent* event)
         qApp->focusWidget() == ui->spin_minZ ||
         qApp->focusWidget() == ui->spin_maxZ)
             return false; // keyboard control is prohibited
-return false;
+//return false;
 
     if(event->type()==QEvent::KeyPress){
         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
@@ -271,57 +272,71 @@ void MainWindow::on_btn_serial_clicked()
 
 void MainWindow::on_btn_settings_clicked()
 {
-    DlgConfig dlgConfig;
-    dlgConfig.exec();
+    qApp->removeEventFilter(this);
+    DlgConfig dlgConfig(_grbl, _settings);
+    if(dlgConfig.exec() == QDialog::Accepted){
+        _statusTimerPeriod = 1000 / dlgConfig.refreshRate();
+        _restartTimer = true;
+        if(dlgConfig.verbosityLevel() != GSharpieReportLevel){
+            GSharpieReportLevel = 0;
+            on_errorReport(0, QString("Verbosity is set to ") + dlgConfig.verbosityName());
+            GSharpieReportLevel = dlgConfig.verbosityLevel();
+        }
+        ui->label_units->setText(_grbl->getConfiguration().imperial? "inches": "mm");
+    }
+    qApp->installEventFilter(this);
 }
 
 
-void MainWindow::on_btn_simulation_clicked()
-{
-    if(_grbl->isActive())
-       _issueCommand("$C", "Check mode");
-}
+//void MainWindow::on_btn_simulation_clicked()
+//{
+//   _grbl->issueCommand("$C", "Check mode");
+//}
 
 
 void MainWindow::on_btn_unlock_clicked()
 {
-    if(_grbl->isActive())
-        _issueCommand("$X", "Unlock alarm");
+    if(_grbl->issueCommand("$X", "Unlock alarm") > 0)
+        _grbl->setFeedRate(_grbl->getFeedRate()); // reset feedrate
 }
 
 
 void MainWindow::on_btn_reset_clicked()
 {
-    if(_grbl->isActive())
-        _grbl->issueRealtimeCommand(GrblControl::SOFT_RESET);
+    _initMainControls(); // disable unti reset
+    _grbl->issueRealtimeCommand(GrblControl::SOFT_RESET);
 }
 
 
 void MainWindow::on_btn_setXOrigin_clicked()
 {
-    if(_grbl->isActive())
-        _issueCommand("G10P1L20X0", "Set X origin");
+    char cmd[32];
+    ::sprintf(cmd, "G10L20P%dX0", ui->combo_toolOffset->currentIndex()+1);
+    _grbl->issueCommand(cmd, "Set X origin");
 }
 
 
 void MainWindow::on_btn_setYOrigin_clicked()
 {
-    if(_grbl->isActive())
-        _issueCommand("G10P1L20Y0", "Set Y origin");
+    char cmd[32];
+    ::sprintf(cmd, "G10L20P%dY0", ui->combo_toolOffset->currentIndex()+1);
+    _grbl->issueCommand(cmd, "Set Y origin");
 }
 
 
 void MainWindow::on_btn_setZOrigin_clicked()
 {
-    if(_grbl->isActive())
-        _issueCommand("G10P1L20Z0", "Set Z origin");
+    char cmd[32];
+    ::sprintf(cmd, "G10L20P%dZ0", ui->combo_toolOffset->currentIndex()+1);
+    _grbl->issueCommand(cmd, "Set Z origin");
 }
 
 
 void MainWindow::on_btn_setXYZOrigin_pressed()
 {
-    if(_grbl->isActive())
-        _issueCommand("G10P1L20X0Y0Z0", "Set XYZ origin");
+    char cmd[32];
+    ::sprintf(cmd, "G10L20P%dX0Y0Z0", ui->combo_toolOffset->currentIndex()+1);
+    _grbl->issueCommand(cmd, "Set XYZ origin");
 }
 
 
@@ -345,7 +360,7 @@ void MainWindow::on_btn_homing_clicked()
 {
     if(!_grbl->isActive()) return;
     _timerStatus->stop(); // status is not reported during homing
-    _issueCommand("$H", "Homing");
+    _grbl->issueCommand("$H", "Homing");
     ui->label_status->setText("homing");
     _restartTimer = true;
 }
@@ -353,10 +368,24 @@ void MainWindow::on_btn_homing_clicked()
 
 void MainWindow::on_btn_singleCommand_clicked()
 {
-    _issueCommand(ui->edit_singleCommand->text().toLatin1().constData(), "User command");
+    if(ui->edit_singleCommand->text().isEmpty())
+        return;
+    _grbl->issueCommand(ui->edit_singleCommand->text().toLatin1().constData(), "User command");
     on_errorReport(0, QString("User command: ") + ui->edit_singleCommand->text());
     ui->edit_singleCommand->clear();
     this->setFocus();
+}
+
+
+void MainWindow::on_edit_singleCommand_returnPressed()
+{
+    on_btn_singleCommand_clicked();
+}
+
+
+void MainWindow::on_combo_toolOffset_currentIndexChanged(const QString &arg1)
+{
+    _grbl->issueCommand(arg1.toLatin1().constData(), "Tool offset");
 }
 
 
@@ -371,6 +400,7 @@ void MainWindow::on_GrblResponse(GrblControl::Command cmd)
         on_errorReport(1, cmd.name + QStringLiteral(": ") + cmd.error);
 
     if(_restartTimer){
+        on_errorReport(-1, QString("Restarting status timer with period = ") + QString::number(_statusTimerPeriod));
         _restartTimer = false;
         _timerStatus->start(_statusTimerPeriod);
     }
@@ -426,7 +456,6 @@ void MainWindow::_updateStatus()
 {
     GrblControl::Status status = _grbl->getCurrentStatus();
     const GrblControl::MACHINE_STATE& state = status.state;
-//qDebug() << "Grbl status recceived";
 
     ui->label_status->setText(state==GrblControl::Jog?   QStringLiteral("jogging"):
                               state==GrblControl::Run?   QStringLiteral("running"):
@@ -447,24 +476,29 @@ void MainWindow::_updateStatus()
     ui->label_MPosY->setText(QString::number(status.pos.mpos.y(), 'f', 3));
     ui->label_MPosZ->setText(QString::number(status.pos.mpos.z(), 'f', 3));
 
-//    ui->btnJogL->setEnabled(state==GrblControl::Idle); // X
-//    ui->btnJogR->setEnabled(state==GrblControl::Idle);
-//    ui->btnJogF->setEnabled(state==GrblControl::Idle); // Y
-//    ui->btnJogB->setEnabled(state==GrblControl::Idle);
-//    ui->btnJogU->setEnabled(state==GrblControl::Idle); // Z
-//    ui->btnJogD->setEnabled(state==GrblControl::Idle);
+    ui->btn_unlock->setEnabled(state==GrblControl::Alarm);
+    ui->btn_reset->setEnabled(_grbl->isOpened());
+    ui->btn_settings->setEnabled(_grbl->isActive());
 
-//    ui->dial_JogStep->setEnabled(state==GrblControl::Idle);
+    // --- simulation mode has to be thoroughly tested ---
+    //    ui->btn_simulation->setEnabled(state==GrblControl::Idle || state==GrblControl::Check);
+    //    ui->btn_simulation->setText(state==GrblControl::Check? QStringLiteral("Operation"):
+    //                                                           QStringLiteral("Simulation"));
 
-//    ui->btnHoming->setEnabled(state==GrblControl::Idle);
+    ui->btn_jogLeft->setEnabled(state==GrblControl::Idle || state==GrblControl::Jog); // X
+    ui->btn_jogRight->setEnabled(state==GrblControl::Idle || state==GrblControl::Jog);
+    ui->btn_jogForward->setEnabled(state==GrblControl::Idle || state==GrblControl::Jog); // Y
+    ui->btn_jogBackward->setEnabled(state==GrblControl::Idle || state==GrblControl::Jog);
+    ui->btn_jogUp->setEnabled(state==GrblControl::Idle || state==GrblControl::Jog); // Z
+    ui->btn_jogDown->setEnabled(state==GrblControl::Idle || state==GrblControl::Jog);
 
-//    ui->btnSimulation->setEnabled(state==GrblControl::Idle || state==GrblControl::Check);
-//    ui->btnSimulation->setText(state==GrblControl::Check? QStringLiteral("Operation"):
-//                                                          QStringLiteral("Simulation"));
+    ui->btn_homing->setEnabled(state==GrblControl::Idle || state==GrblControl::Alarm);
+    ui->btn_setXOrigin->setEnabled(state==GrblControl::Idle);
+    ui->btn_setYOrigin->setEnabled(state==GrblControl::Idle);
+    ui->btn_setZOrigin->setEnabled(state==GrblControl::Idle);
+    ui->btn_setXYZOrigin->setEnabled(state==GrblControl::Idle);
 
-//    ui->btnUnlock->setEnabled(state==GrblControl::Alarm);
-
-//    ui->btnReset->setEnabled(_grbl->isOpened());
+    ui->label_units->setText(_grbl->getConfiguration().imperial? "inches": "mm");
 }
 
 
@@ -498,7 +532,7 @@ void MainWindow::_sendGCode()
         return;
     }
 
-    _issueCommand(gcode.c_str(), "G-Code");
+    _grbl->issueCommand(gcode.c_str(), "G-Code");
 
     if(queue < 3)
         _timerGCode->start(5);
@@ -507,18 +541,28 @@ void MainWindow::_sendGCode()
 }
 
 
-quint32 MainWindow::_issueCommand(const char* code, const QString& name)
+void MainWindow::_initMainControls()
 {
-    static char data[128];
-    ::strncpy(data, code, 120);
-    ::strcat(data, "\n");
+    ui->btn_runGCode->setEnabled(false);
+    ui->btn_saveGCode->setEnabled(false);
+    ui->edit_textGCode->setReadOnly(true);
+    ui->label_stateGCode->clear();
 
-    quint32 id = _grbl->issueCommand(data, name);
-    if(id == 0)
-        on_errorReport(1, QString("Cannot issue ") + name);
-    else
-        on_errorReport(-1, QString("Issued [") + QString::number(id) + QStringLiteral("] ") +
-                           name + QStringLiteral(" (") + QString(code) + QStringLiteral(")"));
+    ui->btn_unlock->setEnabled(false);
+    ui->btn_reset->setEnabled(false);
+    ui->btn_settings->setEnabled(false);
+    ui->btn_simulation->setEnabled(false);
 
-    return id;
+    ui->btn_jogLeft->setEnabled(false); // X
+    ui->btn_jogRight->setEnabled(false);
+    ui->btn_jogForward->setEnabled(false); // Y
+    ui->btn_jogBackward->setEnabled(false);
+    ui->btn_jogUp->setEnabled(false); // Z
+    ui->btn_jogDown->setEnabled(false);
+
+    ui->btn_homing->setEnabled(false);
+    ui->btn_setXOrigin->setEnabled(false);
+    ui->btn_setYOrigin->setEnabled(false);
+    ui->btn_setZOrigin->setEnabled(false);
+    ui->btn_setXYZOrigin->setEnabled(false);
 }

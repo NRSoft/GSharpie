@@ -37,7 +37,7 @@
      <rect>
       <x>290</x>
       <y>270</y>
-      <width>561</width>
+      <width>571</width>
       <height>111</height>
      </rect>
     </property>
@@ -978,23 +978,7 @@
       <enum>Qt::Vertical</enum>
      </property>
     </widget>
-    <widget class="QLabel" name="label_15">
-     <property name="geometry">
-      <rect>
-       <x>680</x>
-       <y>140</y>
-       <width>41</width>
-       <height>21</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>feed</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-    <widget class="QComboBox" name="comboBox">
+    <widget class="QComboBox" name="combo_toolOffset">
      <property name="geometry">
       <rect>
        <x>200</x>
@@ -1040,59 +1024,29 @@
       </property>
      </item>
     </widget>
-    <zorder>label_7</zorder>
-    <zorder>label_4</zorder>
-    <zorder>label_5</zorder>
-    <zorder>label_WPosX</zorder>
-    <zorder>label_WPosY</zorder>
-    <zorder>label_WPosZ</zorder>
-    <zorder>label</zorder>
-    <zorder>label_2</zorder>
-    <zorder>label_3</zorder>
-    <zorder>label_MPosZ</zorder>
-    <zorder>label_MPosY</zorder>
-    <zorder>label_MPosX</zorder>
-    <zorder>label_9</zorder>
-    <zorder>btn_jogLeft</zorder>
-    <zorder>btn_jogRight</zorder>
-    <zorder>label_8</zorder>
-    <zorder>btn_jogBackward</zorder>
-    <zorder>label_11</zorder>
-    <zorder>btn_jogForward</zorder>
-    <zorder>label_10</zorder>
-    <zorder>btn_jogUp</zorder>
-    <zorder>btn_jogDown</zorder>
-    <zorder>btn_setXOrigin</zorder>
-    <zorder>btn_setYOrigin</zorder>
-    <zorder>btn_setZOrigin</zorder>
-    <zorder>label_13</zorder>
-    <zorder>line</zorder>
-    <zorder>line_2</zorder>
-    <zorder>btn_homing</zorder>
-    <zorder>btn_setXYZOrigin</zorder>
-    <zorder>label_14</zorder>
-    <zorder>btn_setMinLimit</zorder>
-    <zorder>spin_minX</zorder>
-    <zorder>spin_minY</zorder>
-    <zorder>spin_minZ</zorder>
-    <zorder>spin_maxX</zorder>
-    <zorder>btn_setMaxLimit</zorder>
-    <zorder>spin_maxZ</zorder>
-    <zorder>spin_maxY</zorder>
-    <zorder>check_obeyLimits</zorder>
-    <zorder>dial_jogFeed</zorder>
-    <zorder>label_jogFeed</zorder>
-    <zorder>line_4</zorder>
-    <zorder>label_15</zorder>
-    <zorder>comboBox</zorder>
-    <zorder>comboBox</zorder>
+    <widget class="QLabel" name="label_15">
+     <property name="geometry">
+      <rect>
+       <x>680</x>
+       <y>140</y>
+       <width>41</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>rate</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
    </widget>
    <widget class="QLabel" name="label_status">
     <property name="geometry">
      <rect>
-      <x>440</x>
+      <x>370</x>
       <y>15</y>
-      <width>311</width>
+      <width>291</width>
       <height>20</height>
      </rect>
     </property>
@@ -1115,7 +1069,7 @@
    <widget class="QLabel" name="label_6">
     <property name="geometry">
      <rect>
-      <x>380</x>
+      <x>310</x>
       <y>15</y>
       <width>51</width>
       <height>20</height>
@@ -1161,7 +1115,7 @@
    <widget class="QToolButton" name="btn_unlock">
     <property name="geometry">
      <rect>
-      <x>300</x>
+      <x>680</x>
       <y>10</y>
       <width>26</width>
       <height>26</height>
@@ -1230,7 +1184,7 @@
    <widget class="QToolButton" name="btn_reset">
     <property name="geometry">
      <rect>
-      <x>340</x>
+      <x>720</x>
       <y>10</y>
       <width>26</width>
       <height>26</height>
@@ -1433,7 +1387,7 @@
      </font>
     </property>
     <property name="text">
-     <string>inches</string>
+     <string/>
     </property>
     <property name="alignment">
      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -1468,7 +1422,7 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>900</x>
+      <x>910</x>
       <y>270</y>
       <width>91</width>
       <height>61</height>
@@ -1495,7 +1449,7 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>870</x>
+      <x>880</x>
       <y>330</y>
       <width>141</width>
       <height>21</height>
@@ -1519,9 +1473,9 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>860</x>
+      <x>870</x>
       <y>350</y>
-      <width>171</width>
+      <width>161</width>
       <height>21</height>
      </rect>
     </property>
@@ -1535,6 +1489,19 @@
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
+    </property>
+   </widget>
+   <widget class="Line" name="line_3">
+    <property name="geometry">
+     <rect>
+      <x>760</x>
+      <y>10</y>
+      <width>16</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Vertical</enum>
     </property>
    </widget>
    <zorder>groupBox</zorder>
@@ -1560,6 +1527,7 @@
    <zorder>label_16</zorder>
    <zorder>label_18</zorder>
    <zorder>label_19</zorder>
+   <zorder>line_3</zorder>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
