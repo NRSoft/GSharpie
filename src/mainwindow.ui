@@ -993,6 +993,9 @@
        <bold>true</bold>
       </font>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Current work offset&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <item>
       <property name="text">
        <string>G54</string>
@@ -1233,7 +1236,7 @@
       <x>20</x>
       <y>60</y>
       <width>251</width>
-      <height>361</height>
+      <height>351</height>
      </rect>
     </property>
    </widget>
@@ -1311,7 +1314,7 @@
      <rect>
       <x>150</x>
       <y>23</y>
-      <width>59</width>
+      <width>71</width>
       <height>21</height>
      </rect>
     </property>
@@ -1327,7 +1330,7 @@
      <rect>
       <x>430</x>
       <y>393</y>
-      <width>211</width>
+      <width>251</width>
       <height>21</height>
      </rect>
     </property>
@@ -1338,7 +1341,7 @@
    <widget class="QToolButton" name="btn_singleCommand">
     <property name="geometry">
      <rect>
-      <x>660</x>
+      <x>700</x>
       <y>390</y>
       <width>26</width>
       <height>26</height>
