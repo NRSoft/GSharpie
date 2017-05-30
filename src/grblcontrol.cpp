@@ -514,9 +514,13 @@ void GrblControl::updateStartupBlock(const char* block, uint32_t n)
     if(!isActive() || n > 1)
         return;
 
+    if(_startup[n] == QLatin1String(block))
+        return;
+
     char cmd[64];
     ::sprintf(cmd, "SN%d=%s", n, block);
     issueCommand(cmd, QString("Startup block ") + QString::number(n));
+    _startup[n] = QLatin1String(block);
 }
 
 
