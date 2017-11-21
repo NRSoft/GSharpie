@@ -16,17 +16,19 @@ void MainWindow::_initJoggingControls()
 ///////  p r e p a r e  J o g  C o m m a n d  //////
 void MainWindow::_prepareJogCommand(char axis, double limit)
 {
-    ::sprintf(_jogCommand, "$J=G90F%d%c%.3f", _jogRate, axis, limit);
+    ::sprintf(_jogCommand, "$J=G90G21F%d%c%.3f", _jogRate, axis, limit);
 }
 
 
 //////  c a n c e l  J o g g i n g  //////
 void MainWindow::_cancelJogging()
 {
-    if(_isJogging){
-        _isJogging = false;
-        _grbl->issueRealtimeCommand(GrblControl::CANCEL_JOGGING);
+    if(!_isJogging){
+//        on_errorReport(1, QString("Attempt to cancel jogging on idle"));
+        return;
     }
+    _isJogging = false;
+    _grbl->issueRealtimeCommand(GrblControl::CANCEL_JOGGING);
 }
 
 
@@ -161,7 +163,7 @@ void MainWindow::on_btn_jogDown_pressed()
 {
     if(_grbl->getCurrentStatus().state == GrblControl::Idle){
         _prepareJogCommand('Z', ui->check_obeyLimits->isChecked()? ui->spin_minZ->value(): -9999.);
-        _grbl->issueCommand(_jogCommand, "Jog up");
+        _grbl->issueCommand(_jogCommand, "Jog down");
         _isJogging = true;
     }
 }

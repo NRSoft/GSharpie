@@ -21,7 +21,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->text_errorLog->clear();
 
-    on_errorReport(0, QString("Program started on ") + QDate::currentDate().toString());
+    on_errorReport(0, QString("G-Sharpie started on ") + QDate::currentDate().toString());
 //GSharpieReportLevel = -1;
 
     _grbl = new GrblControl();
@@ -565,4 +565,41 @@ void MainWindow::_initMainControls()
     ui->btn_setYOrigin->setEnabled(false);
     ui->btn_setZOrigin->setEnabled(false);
     ui->btn_setXYZOrigin->setEnabled(false);
+}
+
+
+void MainWindow::on_spin_maxX_valueChanged(double arg1)
+{
+    if(arg1 < ui->spin_minX->value()) // check limits
+        ui->spin_maxX->setValue(ui->spin_minX->value());
+}
+
+void MainWindow::on_spin_minX_valueChanged(double arg1)
+{
+    if(arg1 > ui->spin_maxX->value()) // check limits
+        ui->spin_minX->setValue(ui->spin_maxX->value());
+}
+
+void MainWindow::on_spin_maxY_valueChanged(double arg1)
+{
+    if(arg1 < ui->spin_minY->value()) // check limits
+        ui->spin_maxY->setValue(ui->spin_minY->value());
+}
+
+void MainWindow::on_spin_minY_valueChanged(double arg1)
+{
+    if(arg1 > ui->spin_maxY->value()) // check limits
+        ui->spin_minY->setValue(ui->spin_maxY->value());
+}
+
+void MainWindow::on_spin_maxZ_valueChanged(double arg1)
+{
+    if(arg1 < ui->spin_minZ->value()) // check limits
+        ui->spin_maxZ->setValue(ui->spin_minZ->value());
+}
+
+void MainWindow::on_spin_minZ_valueChanged(double arg1)
+{
+    if(arg1 > ui->spin_maxZ->value()) // check limits
+        ui->spin_minZ->setValue(ui->spin_maxZ->value());
 }

@@ -87,6 +87,18 @@ private slots:
 
     void on_combo_toolOffset_currentIndexChanged(const QString &arg1);
 
+    void on_spin_maxX_valueChanged(double arg1);
+
+    void on_spin_minX_valueChanged(double arg1);
+
+    void on_spin_maxY_valueChanged(double arg1);
+
+    void on_spin_minY_valueChanged(double arg1);
+
+    void on_spin_maxZ_valueChanged(double arg1);
+
+    void on_spin_minZ_valueChanged(double arg1);
+
 private:
     void _loadSequencer(const QString& program);
 

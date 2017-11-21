@@ -115,8 +115,8 @@ bool GrblControl::issueRealtimeCommand(REALTIME_COMMAND cmd)
 //            qDebug("To Grbl: 0x%02X", static_cast<uint8_t>(cmd));//data[0]);
         return true;
     }
-    else
-        qDebug("Error issuing 0x%02X", static_cast<uint8_t>(cmd));
+//    else
+//        qDebug("Error issuing 0x%02X", static_cast<uint8_t>(cmd));
 
     emit report(1, QString("Cannot issue realtime Grbl command: 0x") + QString::number(cmd, 16));
     return false;
@@ -224,8 +224,8 @@ void GrblControl::_retrieveStatus(const QByteArray& line)
         }
         else if(field->at(0) == 'A'){ // Accessory state (not implemented yet)
         }
-        else
-            qDebug() << "Unexpected status field" << *field;
+//        else
+//            qDebug() << "Unexpected status field" << *field;
 
         // calculate relative position
         if(defaultPos == MPOS)
